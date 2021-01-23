@@ -87,35 +87,35 @@ fun main() {
                 when(words[1]) {
                     // create a group unless one exists
                     "-create" -> {
-                        if (chatGroups.find { it.name == targetGroupName && it.chatId == msg.chat.id } == null) {
-                            groups.add(SubGroup(name = words[2], chatId = msg.chat.id, creatorId = msg.from?.id ?: -1, creatorUsername = msg.from?.username ?: "<empty>"))
-                            bot.sendMessage(msg.chat.id, "Created group: ${words[2]}")
+                        if (chatGroups.find { it.name == targetGroupName } == null) {
+                            groups.add(SubGroup(name = targetGroupName, chatId = msg.chat.id, creatorId = msg.from?.id ?: -1, creatorUsername = msg.from?.username ?: "<empty>"))
+                            bot.sendMessage(msg.chat.id, "Created group: $targetGroupName")
                         } else {
-                            bot.sendMessage(msg.chat.id, "Group with name ${words[2]} already exists")
+                            bot.sendMessage(msg.chat.id, "Group with name $targetGroupName already exists")
                         }
                     }
                     // join the group
                     "-join" -> {
-                        val currentGroup = chatGroups.find { it.name == words[2] }
+                        val currentGroup = chatGroups.find { it.name == targetGroupName }
                         if (currentGroup != null) {
                             val username = msg.from?.username
                             if (username != null) {
                                 if (!currentGroup.members.contains(username)) {
                                     currentGroup.members.add(username)
-                                    bot.sendMessage(msg.chat.id, "User with id $username (first name: ${msg.from?.first_name ?: "<empty>"}) added to group ${currentGroup.name}")
+                                    bot.sendMessage(msg.chat.id, "User $username (first name: ${msg.from?.first_name ?: "<empty>"}) added to group ${currentGroup.name}")
                                 } else {
-                                    bot.sendMessage(msg.chat.id, "User with id $username (first name: ${msg.from?.first_name ?: "<empty>"}) is already in group ${currentGroup.name}")
+                                    bot.sendMessage(msg.chat.id, "User $username (first name: ${msg.from?.first_name ?: "<empty>"}) is already in group ${currentGroup.name}")
                                 }
                             } else {
                                 bot.sendMessage(msg.chat.id, "Hey, you don't have a username! Please, set one up in your settings and retry joining, otherwise I can't tag you properly :(.")
                             }
                         } else {
-                            bot.sendMessage(msg.chat.id, "Group with name ${words[2]} doesn't exist. Create one using /g -create <name> before adding members.")
+                            bot.sendMessage(msg.chat.id, "Group with name $targetGroupName doesn't exist. Create one using /g -create <name> before adding members.")
                         }
                     }
                     // leave the group
                     "-leave" -> {
-                        val currentGroup = chatGroups.find { it.name == words[2] }
+                        val currentGroup = chatGroups.find { it.name == targetGroupName }
                         if (currentGroup != null) {
                             val username = msg.from?.username
                             if (currentGroup.members.contains(username)) {
@@ -125,12 +125,12 @@ fun main() {
                                 bot.sendMessage(msg.chat.id, "$username is not a member of group ${currentGroup.name}.")
                             }
                         } else {
-                            bot.sendMessage(msg.chat.id, "Group with name ${words[2]} doesn't exist. Create one using /g -create <name> before adding members.")
+                            bot.sendMessage(msg.chat.id, "Group with name $targetGroupName doesn't exist. Create one using /g -create <name> before adding members.")
                         }
                     }
                     // delete the group (only the original creator can do this)
                     "-delete" -> {
-                        val currentGroup = chatGroups.find { it.name == words[2] }
+                        val currentGroup = chatGroups.find { it.name == targetGroupName }
                         if (currentGroup != null) {
                             if (currentGroup.creatorId == msg.from?.id || currentGroup.creatorId == -1) {
                                 groups.remove(currentGroup)
@@ -139,20 +139,20 @@ fun main() {
                                 bot.sendMessage(msg.chat.id, "Groups can only be deleted by whoever created them. Group ${currentGroup.name} was created by: ${currentGroup.creatorUsername}")
                             }
                         } else {
-                            bot.sendMessage(msg.chat.id, "Group with name ${words[2]} doesn't exist. Create one using /g -create <name> before adding members.")
+                            bot.sendMessage(msg.chat.id, "Group with name $targetGroupName doesn't exist. Create one using /g -create <name> before adding members.")
                         }
                     }
                     // list all members of group
                     "-members" -> {
-                        val currentGroup = chatGroups.find { it.name == words[2] }
+                        val currentGroup = chatGroups.find { it.name == targetGroupName }
                         if (currentGroup != null) {
                             if (currentGroup.members.isNotEmpty()) {
-                                bot.sendMessage(msg.chat.id, "Group ${words[2]} members are: ${currentGroup.members}")
+                                bot.sendMessage(msg.chat.id, "Group $targetGroupName members are: ${currentGroup.members}")
                             } else {
-                                bot.sendMessage(msg.chat.id, "Group with name ${words[2]} has no members. People can join using /g -join <group-name> before adding members.")
+                                bot.sendMessage(msg.chat.id, "Group with name $targetGroupName has no members. People can join using /g -join <group-name> before adding members.")
                             }
                         } else {
-                            bot.sendMessage(msg.chat.id, "Group with name ${words[2]} doesn't exist. Create one using /g -create <name> before adding members.")
+                            bot.sendMessage(msg.chat.id, "Group with name $targetGroupName doesn't exist. Create one using /g -create <name> before adding members.")
                         }
                     }
                     // lists all groups in this chat
