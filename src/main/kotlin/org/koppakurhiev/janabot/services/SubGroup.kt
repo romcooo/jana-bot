@@ -1,45 +1,4 @@
-package org.koppakurhiev.janabot.core
-
-
-private const val EMPTY = "<empty>"
-
-class SubGroup(
-    val name: String,
-    val chatId: Long,
-    // members by username:
-    val members: MutableList<String> = mutableListOf(),
-    val creatorId: Int,
-    val creatorUsername: String
-) {
-
-    fun toStringWithChatID(): String {
-        return "SubGroup(chatId = $chatId, name='$name', members=$members)"
-
-    }
-
-    override fun toString(): String {
-        return "SubGroup(name='$name', members=$members)"
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as SubGroup
-
-        if (name != other.name) return false
-        if (chatId != other.chatId) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = name.hashCode()
-        result = 31 * result + chatId.hashCode()
-        return result
-    }
-
-}
+package org.koppakurhiev.janabot.services
 
 interface GroupsManager {
     fun load()
@@ -51,20 +10,50 @@ interface GroupsManager {
     fun listGroupsInChat(chatId: Long): String
     fun listAllGroups(): String
     fun tagMembers(groupName: String, chatId: Long, username: String?): String
-
-    companion object {
-        fun defaultImplementation(): GroupsManager = DefaultGroupsManager()
-    }
 }
 
-
 class DefaultGroupsManager : GroupsManager {
+    companion object {
+        const val EMPTY_STRING = "<empty>"
+    }
+
+    class SubGroup(
+        val name: String,
+        val chatId: Long,
+        // members by username:
+        val members: MutableList<String> = mutableListOf(),
+        val creatorId: Int,
+        val creatorUsername: String
+    ) {
+
+        fun toStringWithChatID(): String {
+            return "SubGroup(chatId = $chatId, name='$name', members=$members)"
+        }
+
+        override fun toString(): String {
+            return "SubGroup(name='$name', members=$members)"
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as SubGroup
+            if (name != other.name) return false
+            if (chatId != other.chatId) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = name.hashCode()
+            result = 31 * result + chatId.hashCode()
+            return result
+        }
+    }
 
     private val groups: MutableList<SubGroup> = mutableListOf()
 
-    // in future, load from persistence?
     override fun load() {
-        TODO("Not yet implemented")
+        TODO("Not yet implemented") // in future, load from persistence
     }
 
     override fun create(groupName: String, chatId: Long, fromId: Int?, fromUsername: String?): String {
@@ -75,7 +64,7 @@ class DefaultGroupsManager : GroupsManager {
                         name = groupName,
                         chatId = chatId,
                         creatorId = fromId ?: -1,
-                        creatorUsername = fromUsername ?: EMPTY
+                        creatorUsername = fromUsername ?: EMPTY_STRING
                     )
                 )
                 println("adding group $groupName, groups: $groups")
@@ -110,7 +99,7 @@ class DefaultGroupsManager : GroupsManager {
         val currentGroup = groupForChatWithName(chatId, groupName)
         return if (currentGroup != null) {
             if (currentGroup.members.remove(username)) {
-                "User with username ${username ?: EMPTY} removed from group $groupName."
+                "User with username ${username ?: EMPTY_STRING} removed from group $groupName."
             } else {
                 "$username is not a member of group $groupName."
             }
@@ -147,7 +136,7 @@ class DefaultGroupsManager : GroupsManager {
     }
 
     override fun listGroupsInChat(chatId: Long): String {
-        val chatGroups = groups.filter {g -> g.chatId == chatId}.toList()
+        val chatGroups = groups.filter { g -> g.chatId == chatId }.toList()
         return if (chatGroups.isNotEmpty()) {
             "Current groups in this chat are: $chatGroups"
         } else {
@@ -158,7 +147,7 @@ class DefaultGroupsManager : GroupsManager {
     override fun listAllGroups(): String {
         return if (groups.isNotEmpty()) {
             val allGroups = StringBuilder()
-            groups.forEach{allGroups.append(it.toStringWithChatID())}
+            groups.forEach { allGroups.append(it.toStringWithChatID()) }
             "Current groups across all chats are: $allGroups}"
         } else {
             "No groups currently exist anywhere."
@@ -173,7 +162,7 @@ class DefaultGroupsManager : GroupsManager {
             for (user in currentGroup.members) {
                 tags.append("@$user ")
             }
-            tags.append("- ${username ?: EMPTY} has a message for you, check it out!")
+            tags.append("- ${username ?: EMPTY_STRING} has a message for you, check it out!")
             tags.toString()
         } else {
             "Group with name $groupName not found."
@@ -182,6 +171,6 @@ class DefaultGroupsManager : GroupsManager {
 
     private fun groupForChatWithName(chatId: Long, name: String): SubGroup? {
         println("groupForChatWithName: chatId = $chatId, name = $name, groups = $groups")
-        return groups.firstOrNull{ g -> g.chatId == chatId && g.name == name}
+        return groups.firstOrNull { g -> g.chatId == chatId && g.name == name }
     }
 }

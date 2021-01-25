@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm") version "1.4.20"
 }
 
-group = "me.stubn"
+group = "sk.koppakurhiev"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -14,6 +14,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test-junit"))
+    implementation("io.github.microutils:kotlin-logging:2.0.4")
     implementation("com.github.elbekD:kt-telegram-bot:1.3.8")
 }
 
@@ -22,5 +23,5 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "15"
 }
