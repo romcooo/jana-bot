@@ -14,8 +14,9 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test-junit"))
-    implementation("io.github.microutils:kotlin-logging:2.0.4")
     implementation("com.github.elbekD:kt-telegram-bot:1.3.8")
+    implementation("io.github.microutils:kotlin-logging:2.0.4")
+    implementation("ch.qos.logback:logback-classic:1.3.0-alpha5")
 }
 
 tasks.test {
