@@ -18,7 +18,8 @@ class DefaultServices : ABotService() {
         val helpBuilder = StringBuilder()
         commands.forEach {
             if (it.help().isNotBlank()) {
-                helpBuilder.appendLine(it.help())
+                helpBuilder.append("\n")
+                helpBuilder.append(it.help())
             }
         }
         return helpBuilder.toString()
@@ -26,7 +27,7 @@ class DefaultServices : ABotService() {
 
     class Help : ACommand("/help") {
         override fun onCommand(message: Message, s: String?) {
-            val messageBuilder = StringBuilder("\n Currently available commands are:")
+            val messageBuilder = StringBuilder("Currently available commands are:")
             JanaBot.services.forEach {
                 if (it.help().isNotBlank()) {
                     messageBuilder.appendLine(it.help())

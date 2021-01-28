@@ -38,6 +38,5 @@ class SubGroupsService : ABotService() {
             val text = TagCommand.tagMembers(subGroupsManager, message.from?.username, message.chat.id, *taggedChannels.toTypedArray())
             text?.let { JanaBot.bot.sendMessage(message.chat.id, text) }
         }
-
     }
 }

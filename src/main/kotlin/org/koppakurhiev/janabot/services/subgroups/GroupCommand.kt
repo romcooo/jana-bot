@@ -5,13 +5,12 @@ import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.services.ABotService
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
-    private val bot = JanaBot.bot
 
     override fun onCommand(message: Message, s: String?) {
         val words = message.text?.split(" ")
         logger.debug { "Executing command: $words" }
-        if (words == null || words.size <= 2) {
-            bot.sendMessage(message.chat.id, MessageProvider.noCommand())
+        if (words == null || words.size < 2) {
+            JanaBot.bot.sendMessage(message.chat.id, MessageProvider.noCommand())
             return
         }
         val targetGroupName: String? = if (words.size >= 3) words[2] else null
@@ -22,11 +21,11 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-delete" -> deleteSubGroup(targetGroupName, message)
             "-members" -> getSubGroupMembers(targetGroupName, message)
             "-list" -> getChatSubgroups(message)
-            //Use for testing purposes TODO - delete later
+            // Use for testing purposes TODO - delete later
             "-listAll" -> getAllSubGroups(message)
             else -> {
                 logger.trace { "Unknown argument used: ${words[1]}" }
-                bot.sendMessage(message.chat.id, MessageProvider.unrecognizedArgument(words[1]))
+                JanaBot.bot.sendMessage(message.chat.id, MessageProvider.unrecognizedArgument(words[1]))
             }
         }
     }
@@ -41,7 +40,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupExists(groupName)
             }
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun joinSubGroup(groupName: String?, message: Message) {
@@ -55,7 +54,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userAddedToGroup(username, groupName)
             else -> MessageProvider.userInGroup(username, groupName)
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun leaveSubGroup(groupName: String?, message: Message) {
@@ -69,7 +68,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userLeftGroup(username, groupName)
             else -> MessageProvider.userNotInGroup(username, groupName)
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun deleteSubGroup(groupName: String?, message: Message) {
@@ -80,7 +79,8 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             val group = subGroupsManager.getSubGroup(message.chat.id, groupName)
             if (group == null) MessageProvider.groupNotFound(groupName)
             else if (group.creatorId != -1 && group.creatorId != user.id) {
-                val adminUsername = bot.getChatMember(message.chat, group.creatorId.toLong()).get().user.username
+                val adminUsername =
+                    JanaBot.bot.getChatMember(message.chat, group.creatorId.toLong()).get().user.username
                 MessageProvider.noPrivileges(groupName, adminUsername)
             } else if (subGroupsManager.deleteSubGroup(groupName, message.chat.id)) {
                 MessageProvider.groupDeleted(groupName)
@@ -89,7 +89,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupNotFound(groupName)
             }
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun getSubGroupMembers(groupName: String?, message: Message) {
@@ -99,10 +99,10 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             when {
                 members == null -> MessageProvider.groupNotFound(groupName)
                 members.isEmpty() -> MessageProvider.noGroupMembers(groupName)
-                else -> MessageProvider.groupMembers(groupName, members)
+                else -> MessageProvider.subGroupString(groupName, members)
             }
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun getChatSubgroups(message: Message) {
@@ -111,22 +111,26 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         else {
             val subGroupsString = StringBuilder()
             subGroups.forEach {
-                subGroupsString
-                    .append(MessageProvider.subGroupString(it.name, it.members))
+                if (it.members.isEmpty()) {
+                    subGroupsString.appendLine(MessageProvider.noGroupMembers(it.name))
+                } else {
+                    subGroupsString
+                        .appendLine(MessageProvider.subGroupString(it.name, it.members))
+                }
             }
             MessageProvider.chatSubGroups(subGroupsString.toString())
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     private fun getAllSubGroups(message: Message) {
         val groups = subGroupsManager.getAllGroups()
         val text = if (groups.isNotEmpty()) {
-            "Current groups across all chats are: \n${groups.joinToString { "\n" }}"
+            "Current groups across all chats are: \n${groups.joinToString("\n")}"
         } else {
             "No groups currently exist anywhere."
         }
-        bot.sendMessage(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
     object MessageProvider {
@@ -144,18 +148,18 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
 
         fun groupCreated(groupName: String, userName: String?): String {
             return if (userName != null) {
-                "User $userName created group $groupName."
+                "User $userName created group \"$groupName\"."
             } else {
-                "You have created group: $groupName."
+                "You have created group: \"$groupName\"."
             }
         }
 
         fun groupExists(groupName: String): String {
-            return "Group with name $groupName already exists."
+            return "Group with name \"$groupName\" already exists."
         }
 
         fun groupNotFound(groupName: String): String {
-            return "Group with name $groupName doesn't exist.\n" +
+            return "Group with name \"$groupName\" doesn't exist.\n" +
                     "Create groups using /group -create <name>."
         }
 
@@ -165,37 +169,37 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         }
 
         fun userAddedToGroup(username: String, groupName: String): String {
-            return "User $username has been added to the group $groupName"
+            return "User $username has been added to the group \"$groupName\""
         }
 
         fun userInGroup(username: String, groupName: String): String {
-            return "User $username is already in group $groupName"
+            return "User $username is already in group \"$groupName\""
         }
 
         fun userLeftGroup(username: String, groupName: String): String {
-            return "User with username $username left the group $groupName."
+            return "User with username $username left the group \"$groupName\"."
         }
 
         fun userNotInGroup(username: String, groupName: String): String {
-            return "$username is not a member of the group $groupName."
+            return "$username is not a member of the group \"$groupName\"."
         }
 
         fun groupDeleted(groupName: String): String {
-            return "Group $groupName deleted."
+            return "Group \"$groupName\" deleted."
         }
 
         fun noPrivileges(groupName: String, adminUsername: String?): String {
             return "This action can only be performed by the group creator!\n" +
-                    "Group $groupName was created by user $adminUsername."
+                    "Group \"$groupName\" was created by user $adminUsername."
         }
 
         fun noGroupMembers(groupName: String): String {
-            return "Group $groupName has no members!\n" +
+            return "Group \"$groupName\" has no members!\n" +
                     "People can join using \"/group -join $groupName\" command."
         }
 
-        fun groupMembers(groupName: String, members: List<String>): String {
-            return "Group $groupName members are: $members"
+        fun subGroupString(groupName: String, members: List<String>): String {
+            return "Group \"$groupName\" members are: $members"
         }
 
         fun noSubGroups(): String {
@@ -204,10 +208,6 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
 
         fun chatSubGroups(groups: String): String {
             return "Current groups in this chat are:\n$groups"
-        }
-
-        fun subGroupString(groupName: String, members: List<String>): String {
-            return "$groupName with members : $members"
         }
     }
 }
