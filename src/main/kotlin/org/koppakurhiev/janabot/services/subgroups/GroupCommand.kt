@@ -23,6 +23,8 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-list" -> getChatSubgroups(message)
             // Use for testing purposes TODO - delete later
             "-listAll" -> getAllSubGroups(message)
+            "-save" -> saveSubGroups()
+            "-load" -> loadSubGroups()
             else -> {
                 logger.trace { "Unknown argument used: ${words[1]}" }
                 JanaBot.bot.sendMessage(message.chat.id, MessageProvider.unrecognizedArgument(words[1]))
@@ -131,6 +133,14 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "No groups currently exist anywhere."
         }
         JanaBot.bot.sendMessage(message.chat.id, text)
+    }
+
+    private fun saveSubGroups() {
+        subGroupsManager.save()
+    }
+
+    private fun loadSubGroups() {
+        subGroupsManager.load()
     }
 
     object MessageProvider {

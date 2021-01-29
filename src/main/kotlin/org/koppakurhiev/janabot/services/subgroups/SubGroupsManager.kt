@@ -1,13 +1,38 @@
 package org.koppakurhiev.janabot.services.subgroups
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import org.koppakurhiev.janabot.persistence.Repository
+import org.koppakurhiev.janabot.persistence.SubGroupSimpleJsonRepository
 
 class SubGroupsManager {
     private val logger = KotlinLogging.logger {}
-    private val groups: MutableList<SubGroup> = mutableListOf()
+    private var groups: MutableList<SubGroup> = mutableListOf()
+    private val repository: Repository<SubGroup> = SubGroupSimpleJsonRepository()
 
+    // TODO I don't think these should be commands but the current implementation isn't favorable for
+    // loading at startup
+
+    // TODO probably move GlobalScope to Repository implementation
     fun load() {
-        TODO("Not yet implemented") // in future, load from persistence
+        logger.debug { "Loading groups" }
+        GlobalScope.launch {
+            groups = try {
+                repository.load() as MutableList<SubGroup>
+            } catch (e: ClassCastException) {
+                logger.debug { "Empty list loaded" }
+               mutableListOf()
+            }
+        }
+    }
+
+    fun save() {
+        logger.debug { "Backing up and saving groups" }
+        GlobalScope.launch {
+            repository.backup()
+            repository.save(groups)
+        }
     }
 
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {

@@ -3,7 +3,7 @@ A direct kotlin "simplementation" (at the moment) of https://github.com/elbekD/k
 
 ## Before you start
 Check out https://core.telegram.org/bots.  
-The code targets JVM 11, the current kotlin version is 1.4.20.
+The code targets JVM 15, the current kotlin version is 1.4.21.
 
 ## Current features
 - Subgroup functionality - do you have a big group chat that's muted by every member, 
