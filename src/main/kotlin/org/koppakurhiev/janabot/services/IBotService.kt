@@ -17,6 +17,3 @@ interface IBotService {
         }
     }
 }
-
-
-

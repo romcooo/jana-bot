@@ -3,56 +3,73 @@ package org.koppakurhiev.janabot.services.subgroups
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
+import org.koppakurhiev.janabot.persistence.OperationResultListener
 import org.koppakurhiev.janabot.persistence.Repository
 import org.koppakurhiev.janabot.persistence.SubGroupSimpleJsonRepository
 
 class SubGroupsManager {
     private val logger = KotlinLogging.logger {}
-    private var groups: MutableList<SubGroup> = mutableListOf()
+    private lateinit var groups: MutableList<SubGroup>
     private val repository: Repository<SubGroup> = SubGroupSimpleJsonRepository()
 
-    // TODO I don't think these should be commands but the current implementation isn't favorable for
-    // loading at startup
+    init {
+        load()
+    }
 
-    // TODO probably move GlobalScope to Repository implementation
     fun load() {
         logger.debug { "Loading groups" }
         GlobalScope.launch {
             groups = try {
                 repository.load() as MutableList<SubGroup>
             } catch (e: ClassCastException) {
-                logger.debug { "Empty list loaded" }
-               mutableListOf()
+                logger.debug { "Problem loading groups, probably empty datasource: ${e.message}" }
+                mutableListOf()
             }
         }
     }
 
-    fun save() {
-        logger.debug { "Backing up and saving groups" }
+    private fun save() {
+        logger.debug { "Saving groups" }
         GlobalScope.launch {
-            repository.backup()
             repository.save(groups)
+        }
+    }
+
+    private inline fun <reified T> T.andSave(): T {
+        save()
+        return this
+    }
+
+    fun saveBackup() {
+        logger.info { "Backing up groups" }
+        GlobalScope.launch {
+            repository.backup(groups)
+        }
+    }
+
+    fun getBackups(listener: OperationResultListener) {
+        GlobalScope.launch {
+            repository.getAvailableBackups(listener)
         }
     }
 
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {
         if (getSubGroup(chatId, groupName) != null) return false
         logger.info { "Creating group $groupName for channel $chatId" }
-        groups.add(SubGroup(groupName, chatId, fromId ?: -1))
-        return true
+        return groups.add(SubGroup(groupName, chatId, fromId ?: -1)).andSave()
     }
 
     fun addMember(groupName: String, chatId: Long, username: String): Boolean {
         val currentGroup = getSubGroup(chatId, groupName) ?: return false
         if (currentGroup.members.contains(username)) return false
         logger.debug { "User $username added to the group $groupName" }
-        return currentGroup.members.add(username)
+        return currentGroup.members.add(username).andSave()
     }
 
     fun removeMember(groupName: String, chatId: Long, username: String): Boolean {
         val currentGroup = getSubGroup(chatId, groupName) ?: return false
         logger.debug { "User $username removed from the group $groupName" }
-        return currentGroup.members.remove(username)
+        return currentGroup.members.remove(username).andSave()
     }
 
     fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
@@ -63,7 +80,7 @@ class SubGroupsManager {
     fun deleteSubGroup(groupName: String, chatId: Long): Boolean {
         val currentGroup = getSubGroup(chatId, groupName) ?: return false
         logger.debug { "Group $groupName deleted" }
-        return groups.remove(currentGroup)
+        return groups.remove(currentGroup).andSave()
     }
 
     fun getMembersList(groupName: String, chatId: Long): List<String>? {

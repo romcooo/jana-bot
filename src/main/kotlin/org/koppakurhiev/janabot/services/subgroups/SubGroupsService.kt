@@ -20,7 +20,16 @@ class SubGroupsService : ABotService() {
                 "    -delete <group-name> - delete the <group-name> sub-group (if you are the creator)\n" +
                 "    -members <group-name> - lists the members of sub-group <group-name>\n" +
                 "    -list - list all the sub-groups  within this chat\n" +
-                "    -listAll - lists all groups recognised by this bot\n"
+                "    -listAll - lists all groups recognised by this bot\n" +
+                "    -saveBackup - forces a backup save of current groups\n" +
+                "    -listBackups - lists all stored backup file names (with date and time)\n"
+        /*
+
+            "-saveBackup" -> backupSubGroups()
+            "-listBackups" -> getAvailableBackups(message)
+            // TODO allow loading a backup directly
+            "-load" -> loadSubGroups()
+         */
     }
 
     override fun getCommands(): Array<IBotService.ICommand> {
