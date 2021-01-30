@@ -106,7 +106,7 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
             var delCount = 0
             logger.debug { "Backup files: ${File(BACKUP_PATH).list()?.toMutableList().toString()}" }
             while (File(BACKUP_PATH).list()?.size ?: 0 > MAX_BACKUPS) {
-                File(BACKUP_PATH).listFiles()?.toMutableList()?.sorted()?.first()?.delete()
+                File(BACKUP_PATH).listFiles()?.toMutableList()?.minOrNull()?.delete()
                 delCount++
             }
             logger.info { "Cleaned up $delCount files." }

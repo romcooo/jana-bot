@@ -23,13 +23,6 @@ class SubGroupsService : ABotService() {
                 "    -listAll - lists all groups recognised by this bot\n" +
                 "    -saveBackup - forces a backup save of current groups\n" +
                 "    -listBackups - lists all stored backup file names (with date and time)\n"
-        /*
-
-            "-saveBackup" -> backupSubGroups()
-            "-listBackups" -> getAvailableBackups(message)
-            // TODO allow loading a backup directly
-            "-load" -> loadSubGroups()
-         */
     }
 
     override fun getCommands(): Array<IBotService.ICommand> {
