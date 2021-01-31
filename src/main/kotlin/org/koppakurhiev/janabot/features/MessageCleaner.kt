@@ -10,13 +10,14 @@ class MessageCleaner: ALogged() {
 
     // not needed atm, but might be handy for retroactive deleting if needed (keep in mind it can only be deleted within 48 hours of posting)
     private val livingMessageList: MutableList<LivingMessage> = mutableListOf()
+    private val timer = Timer()
 
     fun registerMessage(livingMessage: LivingMessage) {
         livingMessageList.add(livingMessage)
 
         if (livingMessage.lifetime.length > 0) {
             logger.info { "Scheduling message to be deleted: $livingMessage in ${livingMessage.lifetime.length / 1000} seconds." }
-            Timer().schedule(livingMessage.lifetime.length) {
+            timer.schedule(livingMessage.lifetime.length) {
                 livingMessage.kill()
             }
         }

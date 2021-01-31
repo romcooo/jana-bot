@@ -37,7 +37,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         }
 
         JanaBot.messageCleaner.registerMessage(
-            LivingMessage(chatId = message.chat.id, messageId = message.message_id, lifetime = LivingMessage.MessageLifetime.LONG))
+            LivingMessage(chatId = message.chat.id, messageId = message.message_id, lifetime = LivingMessage.MessageLifetime.MEDIUM))
     }
 
     private fun createSubGroup(groupName: String?, message: Message) {
