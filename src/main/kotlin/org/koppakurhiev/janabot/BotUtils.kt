@@ -43,7 +43,7 @@ class BotBuilder(constType: ConstructionType = ConstructionType.POLLING) {
 }
 
 // extension function to allow deleting of messages after a period of time
-fun Bot.sendMessageWithLifetime(
+fun Bot.sendMessage(
     chatId: Any,
     text: String,
     parseMode: String? = null,
@@ -55,7 +55,8 @@ fun Bot.sendMessageWithLifetime(
     markup: ReplyKeyboard? = null,
     lifetime: LivingMessage.MessageLifetime = LivingMessage.MessageLifetime.DEFAULT): Any {
 
-    val sentMessage = this.sendMessage(chatId, text, parseMode, entities, disableWebPagePreview, disableNotification, replyTo, allowSendingWithoutReply, markup)
+    // the extended function is called here, no recursion
+    val sentMessage = sendMessage(chatId, text, parseMode, entities, disableWebPagePreview, disableNotification, replyTo, allowSendingWithoutReply, markup)
 
     val messageCleaner = JanaBot.messageCleaner
     sentMessage.whenComplete { message, _ ->

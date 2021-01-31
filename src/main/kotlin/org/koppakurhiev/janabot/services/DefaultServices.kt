@@ -3,7 +3,7 @@ package org.koppakurhiev.janabot.services
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.LivingMessage
-import org.koppakurhiev.janabot.sendMessageWithLifetime
+import org.koppakurhiev.janabot.sendMessage
 
 class DefaultServices : ABotService() {
 
@@ -35,7 +35,7 @@ class DefaultServices : ABotService() {
                     messageBuilder.appendLine(it.help())
                 }
             }
-            JanaBot.bot.sendMessageWithLifetime(message.chat.id, messageBuilder.toString(), lifetime = LivingMessage.MessageLifetime.SHORT)
+            JanaBot.bot.sendMessage(message.chat.id, messageBuilder.toString(), lifetime = LivingMessage.MessageLifetime.SHORT)
             // delete triggering message as well
             JanaBot.messageCleaner.registerMessage(
                 LivingMessage(chatId = message.chat.id, messageId = message.message_id, lifetime = LivingMessage.MessageLifetime.SHORT))
@@ -49,7 +49,7 @@ class DefaultServices : ABotService() {
 
     class Start : ABotService.ACommand("/start") {
         override fun onCommand(message: Message, s: String?) {
-            JanaBot.bot.sendMessageWithLifetime(
+            JanaBot.bot.sendMessage(
                 message.chat.id,
                 "Hi, ${message.from?.first_name ?: "person (it looks like you don't have a first_name)"}!",
                 lifetime = LivingMessage.MessageLifetime.FOREVER

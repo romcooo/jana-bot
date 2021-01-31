@@ -4,7 +4,7 @@ import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.LivingMessage
 import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
-import org.koppakurhiev.janabot.sendMessageWithLifetime
+import org.koppakurhiev.janabot.sendMessage
 import org.koppakurhiev.janabot.services.ABotService
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
@@ -13,7 +13,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         val words = message.text?.split(" ")
         logger.debug { "Executing command: $words" }
         if (words == null || words.size < 2) {
-            JanaBot.bot.sendMessageWithLifetime(message.chat.id, MessageProvider.noCommand())
+            JanaBot.bot.sendMessage(message.chat.id, MessageProvider.noCommand(), lifetime = LivingMessage.MessageLifetime.SHORT)
             return
         }
         val targetGroupName: String? = if (words.size >= 3) words[2] else null
@@ -32,12 +32,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
 //            "-load" -> loadSubGroups(filename)
             else -> {
                 logger.trace { "Unknown argument used: ${words[1]}" }
-                JanaBot.bot.sendMessageWithLifetime(message.chat.id, MessageProvider.unrecognizedArgument(words[1]))
+                JanaBot.bot.sendMessage(message.chat.id, MessageProvider.unrecognizedArgument(words[1]), lifetime = LivingMessage.MessageLifetime.SHORT)
             }
         }
 
         JanaBot.messageCleaner.registerMessage(
-            LivingMessage(chatId = message.chat.id, messageId = message.message_id, lifetime = LivingMessage.MessageLifetime.MEDIUM))
+            LivingMessage(chatId = message.chat.id, messageId = message.message_id, lifetime = LivingMessage.MessageLifetime.SHORT))
     }
 
     private fun createSubGroup(groupName: String?, message: Message) {
@@ -50,7 +50,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupExists(groupName)
             }
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.LONG)
     }
 
     private fun joinSubGroup(groupName: String?, message: Message) {
@@ -64,7 +64,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userAddedToGroup(username, groupName)
             else -> MessageProvider.userInGroup(username, groupName)
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.LONG)
     }
 
     private fun leaveSubGroup(groupName: String?, message: Message) {
@@ -78,7 +78,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userLeftGroup(username, groupName)
             else -> MessageProvider.userNotInGroup(username, groupName)
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.LONG)
     }
 
     private fun deleteSubGroup(groupName: String?, message: Message) {
@@ -99,7 +99,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupNotFound(groupName)
             }
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.LONG)
     }
 
     private fun getSubGroupMembers(groupName: String?, message: Message) {
@@ -112,7 +112,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 else -> MessageProvider.subGroupString(groupName, members)
             }
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.SHORT)
     }
 
     private fun getChatSubgroups(message: Message) {
@@ -130,7 +130,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             }
             MessageProvider.chatSubGroups(subGroupsString.toString())
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.SHORT)
     }
 
     private fun getAllSubGroups(message: Message) {
@@ -140,7 +140,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         } else {
             "No groups currently exist anywhere."
         }
-        JanaBot.bot.sendMessageWithLifetime(message.chat.id, text)
+        JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.SHORT)
     }
 
     // TODO add possibility to load a backup by passing a parameter
@@ -241,7 +241,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
 
     class AsyncResultListener(private val chatID: Long): OperationResultListener {
         override fun onOperationDone(operationName: String, isSuccess: Boolean) {
-            JanaBot.bot.sendMessageWithLifetime(chatID, MessageProvider.repositoryOperationResult(operationName, isSuccess))
+            JanaBot.bot.sendMessage(chatID, MessageProvider.repositoryOperationResult(operationName, isSuccess), lifetime = LivingMessage.MessageLifetime.MEDIUM)
         }
     }
 }

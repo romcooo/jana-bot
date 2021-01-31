@@ -38,7 +38,7 @@ data class LivingMessage(val chatId: Any,
         MEDIUM(600000), // 10 minutes
         SHORT(60000), // minute
         FLASH(10000), // 10sec
-        DEFAULT(FLASH.length);
+        DEFAULT(FOREVER.length);
 
         // You can technically change any of these at runtime by assigning a new value to MessageLifetime.CUSTOM.length
         // This is the reason why there is the private default value - you can use reset() to reset one enum at a time
