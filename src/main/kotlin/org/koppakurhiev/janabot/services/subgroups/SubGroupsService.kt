@@ -2,6 +2,8 @@ package org.koppakurhiev.janabot.services.subgroups
 
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
+import org.koppakurhiev.janabot.features.LivingMessage
+import org.koppakurhiev.janabot.sendMessage
 import org.koppakurhiev.janabot.services.ABotService
 import org.koppakurhiev.janabot.services.IBotService
 
@@ -38,7 +40,7 @@ class SubGroupsService : ABotService() {
             val taggedChannels = mutableListOf<String>()
             matches.forEach { taggedChannels.add(it.value.drop(1)) }
             val text = TagCommand.tagMembers(subGroupsManager, message.from?.username, message.chat.id, *taggedChannels.toTypedArray())
-            text?.let { JanaBot.bot.sendMessage(message.chat.id, text) }
+            text?.let { JanaBot.bot.sendMessage(message.chat.id, text, lifetime = LivingMessage.MessageLifetime.FOREVER) }
         }
     }
 }

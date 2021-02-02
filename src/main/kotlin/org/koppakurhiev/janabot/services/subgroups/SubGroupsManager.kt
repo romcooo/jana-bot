@@ -3,8 +3,8 @@ package org.koppakurhiev.janabot.services.subgroups
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
-import org.koppakurhiev.janabot.persistence.OperationResultListener
 import org.koppakurhiev.janabot.persistence.Repository
+import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
 import org.koppakurhiev.janabot.persistence.SubGroupSimpleJsonRepository
 
 class SubGroupsManager {
