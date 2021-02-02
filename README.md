@@ -1,9 +1,9 @@
 # JanaBot
-A direct kotlin "simplementation" (at the moment) of https://github.com/elbekD/kt-telegram-bot
+A direct kotlin implementation of https://github.com/elbekD/kt-telegram-bot
 
 ## Before you start
 Check out https://core.telegram.org/bots.  
-The code targets JVM 11, the current kotlin version is 1.4.20.
+The code targets JVM 15, the current kotlin version is 1.4.21.
 
 ## Current features
 - Subgroup functionality - do you have a big group chat that's muted by every member, 
@@ -26,6 +26,8 @@ The bot currently supports the following commands:
     - \-members \<group-name> - lists all members of the given group.
     - \-list - lists all groups in the given chat room.
     - \-listall - lists all groups the bot is maintaining at that moment, across all chat rooms.
+    - \-saveBackup - forces a backup save of current groups.
+    - \-listBackups - lists all stored backup file names (with date and time).
 
 ## How to run:
 1. Create your own bot user on telegram by following step 3 in https://core.telegram.org/bots.

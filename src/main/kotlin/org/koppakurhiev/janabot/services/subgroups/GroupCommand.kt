@@ -2,6 +2,7 @@ package org.koppakurhiev.janabot.services.subgroups
 
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
+import org.koppakurhiev.janabot.persistence.OperationResultListener
 import org.koppakurhiev.janabot.services.ABotService
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
@@ -21,8 +22,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-delete" -> deleteSubGroup(targetGroupName, message)
             "-members" -> getSubGroupMembers(targetGroupName, message)
             "-list" -> getChatSubgroups(message)
-            // Use for testing purposes TODO - delete later
+            // Use for testing purposes TODO - consider deleting later (but it is kind of useful)
             "-listAll" -> getAllSubGroups(message)
+            "-saveBackup" -> backupSubGroups()
+            "-listBackups" -> getAvailableBackups(message)
+            // TODO allow loading a backup directly
+//            "-load" -> loadSubGroups(filename)
             else -> {
                 logger.trace { "Unknown argument used: ${words[1]}" }
                 JanaBot.bot.sendMessage(message.chat.id, MessageProvider.unrecognizedArgument(words[1]))
@@ -133,6 +138,19 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         JanaBot.bot.sendMessage(message.chat.id, text)
     }
 
+    // TODO add possibility to load a backup by passing a parameter
+    private fun loadSubGroups() {
+        subGroupsManager.load()
+    }
+
+    private fun backupSubGroups() {
+        subGroupsManager.saveBackup()
+    }
+
+    private fun getAvailableBackups(message: Message) {
+        subGroupsManager.getBackups(AsyncResultListener(message.chat.id))
+    }
+
     object MessageProvider {
         fun noCommand(): String {
             return "No /group argument (use /help if needed)"
@@ -208,6 +226,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
 
         fun chatSubGroups(groups: String): String {
             return "Current groups in this chat are:\n$groups"
+        }
+    }
+
+    class AsyncResultListener(private val chatID: Long): OperationResultListener {
+        override fun onOperationDone(result: String) {
+            JanaBot.bot.sendMessage(chatID, result)
         }
     }
 }
