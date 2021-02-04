@@ -11,7 +11,7 @@ interface Repository<T> {
     suspend fun loadBackup(fileName: String): List<T>
 
     interface OperationResultListener {
-        fun onOperationDone(operationName: String = "??", isSuccess: Boolean)
+        fun onOperationDone(operationName: String = "??", isSuccess: Boolean, data: List<String> = emptyList())
     }
 }
 

@@ -100,10 +100,11 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         else {
             val group = subGroupsManager.getSubGroup(message.chat.id, groupName)
             if (group == null) MessageProvider.groupNotFound(groupName)
-            else if (group.creatorId != -1 && group.creatorId != user.id) {
-                val adminUsername =
-                    JanaBot.bot.getChatMember(message.chat, group.creatorId.toLong()).get().user.username
-                MessageProvider.noPrivileges(groupName, adminUsername)
+            else if (group.admins.isEmpty() || !group.admins.contains(user.id)) {
+                val adminUsernames = group.admins.map {
+                    JanaBot.bot.getChatMember(message.chat, it.toLong()).get().user.username
+                }
+                MessageProvider.noPrivileges(groupName, adminUsernames)
             } else if (subGroupsManager.deleteSubGroup(groupName, message.chat.id)) {
                 MessageProvider.groupDeleted(groupName)
             } else {
@@ -165,7 +166,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
     }
 
     private fun getAvailableBackups(message: Message) {
-        subGroupsManager.getBackups(AsyncResultListener(message.chat.id, message.from?.id))
+        subGroupsManager.getBackups(AsyncResultListener(message.chat.id, message.message_id))
     }
 
     object MessageProvider {
@@ -223,9 +224,9 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             return "Group \"$groupName\" deleted."
         }
 
-        fun noPrivileges(groupName: String, adminUsername: String?): String {
+        fun noPrivileges(groupName: String, adminUsernames: List<String?>): String {
             return "This action can only be performed by the group creator!\n" +
-                    "Group \"$groupName\" was created by user $adminUsername."
+                    "Group \"$groupName\" admins are: $adminUsernames."
         }
 
         fun noGroupMembers(groupName: String): String {
@@ -245,16 +246,17 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             return "Current groups in this chat are:\n$groups"
         }
 
-        fun repositoryOperationResult(operation: String, isSuccess: Boolean): String {
+        fun repositoryOperationResult(operation: String, isSuccess: Boolean, data: List<String> = emptyList()): String {
             val resultString = if (isSuccess) "success" else "failure"
-            return "Result of $operation is $resultString"
+            return "Result of $operation is $resultString. $data"
         }
     }
 
     class AsyncResultListener(private val chatID: Long, private val triggerer: Int?): OperationResultListener {
-        override fun onOperationDone(operationName: String, isSuccess: Boolean) {
+        override fun onOperationDone(operationName: String, isSuccess: Boolean, data: List<String>) {
             // can't use context here since it's asynchronous and the variables are passed through
-            JanaBot.bot.sendMessage(chatID, MessageProvider.repositoryOperationResult(operationName, isSuccess), replyTo = triggerer, lifetime = LivingMessage.MessageLifetime.MEDIUM)
+            JanaBot.bot.sendMessage(chatID, MessageProvider.repositoryOperationResult(operationName, isSuccess, data),
+                replyTo = triggerer, lifetime = LivingMessage.MessageLifetime.MEDIUM)
         }
     }
 }

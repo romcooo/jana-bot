@@ -56,7 +56,11 @@ class SubGroupsManager {
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {
         if (getSubGroup(chatId, groupName) != null) return false
         logger.info { "Creating group $groupName for channel $chatId" }
-        return groups.add(SubGroup(groupName, chatId, fromId ?: -1)).andSave()
+        return groups.add(SubGroup(
+            name = groupName,
+            chatId = chatId,
+            admins = if (fromId != null) mutableListOf(fromId) else mutableListOf())
+        ).andSave()
     }
 
     fun addMember(groupName: String, chatId: Long, username: String): Boolean {
@@ -72,9 +76,9 @@ class SubGroupsManager {
         return currentGroup.members.remove(username).andSave()
     }
 
-    fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
+    fun getSubGroup(chatId: Long, groupName: String, ignoreCase: Boolean = true): SubGroup? {
         logger.trace { "obtain SubGroup for: chatId=$chatId, group=$groupName" }
-        return groups.firstOrNull { g -> g.chatId == chatId && g.name == groupName }
+        return groups.firstOrNull { g -> g.chatId == chatId && g.name.equals(groupName, ignoreCase = ignoreCase) }
     }
 
     fun deleteSubGroup(groupName: String, chatId: Long): Boolean {
