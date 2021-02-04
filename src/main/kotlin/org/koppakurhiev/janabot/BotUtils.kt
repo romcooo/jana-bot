@@ -70,3 +70,14 @@ fun Bot.sendMessage(
     }
     return sentMessage
 }
+
+class SimpleConversationContext(val chatId: Any,
+                                val triggerMessageId: Int?) {
+    fun sendMessage(text: String, lifetime: LivingMessage.MessageLifetime? = null) {
+        if (lifetime == null) {
+            JanaBot.bot.sendMessage(chatId = chatId, text = text, replyTo = triggerMessageId)
+        } else {
+            JanaBot.bot.sendMessage(chatId = chatId, text = text, replyTo = triggerMessageId, lifetime = lifetime)
+        }
+    }
+}
