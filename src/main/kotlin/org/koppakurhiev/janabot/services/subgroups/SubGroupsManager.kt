@@ -81,6 +81,17 @@ class SubGroupsManager {
         return groups.firstOrNull { g -> g.chatId == chatId && g.name.equals(groupName, ignoreCase = ignoreCase) }
     }
 
+    fun renameSubGroup(oldGroupName: String, newGroupName: String, chatId: Long): Boolean {
+        val currentGroup = getSubGroup(chatId, oldGroupName) ?: return false
+        if (groups.find { it.name.equals(oldGroupName, ignoreCase = true) } == null) {
+            return false
+        }
+        logger.debug { "Renaming group $oldGroupName to $newGroupName" }
+        currentGroup.name = newGroupName
+        save()
+        return true
+    }
+
     fun deleteSubGroup(groupName: String, chatId: Long): Boolean {
         val currentGroup = getSubGroup(chatId, groupName) ?: return false
         logger.debug { "Group $groupName deleted" }
@@ -100,5 +111,15 @@ class SubGroupsManager {
 
     fun getAllGroups(): List<SubGroup> {
         return groups
+    }
+
+    // TODO consider moving the result responsibility here and based on this Command will only show message
+    enum class SubGroupOperationResult {
+        GROUP_NAME_NOT_FOUND,
+        GROUP_NAME_ALREADY_EXISTS,
+        GROUP_DOES_NOT_CONTAIN_MEMBER,
+        GROUP_ALREADY_CONTAINS_MEMBER,
+        NO_PRIVILEGE,
+        SUCCESS
     }
 }
