@@ -1,8 +1,10 @@
 package org.koppakurhiev.janabot.services.subgroups
 
 import com.elbekD.bot.types.Message
+import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.SimpleConversationContext
 import org.koppakurhiev.janabot.features.LivingMessage
+import org.koppakurhiev.janabot.sendMessage
 import org.koppakurhiev.janabot.services.ABotService
 import org.koppakurhiev.janabot.services.IBotService
 
@@ -36,12 +38,11 @@ class SubGroupsService : ABotService() {
 
     override suspend fun onMessage(message: Message) {
         if (message.text != null) {
-            conversationContext = SimpleConversationContext(message.chat.id, message.message_id)
             val matches = regex.findAll(message.text.toString())
             val taggedChannels = mutableListOf<String>()
             matches.forEach { taggedChannels.add(it.value.drop(1)) }
             val text = TagCommand.tagMembers(subGroupsManager, message.from?.username, message.chat.id, *taggedChannels.toTypedArray())
-            text?.let { conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.FOREVER) }
+            text?.let { JanaBot.bot.sendMessage(message.chat.id, text, replyTo =  message.message_id, lifetime = LivingMessage.MessageLifetime.FOREVER) }
         }
     }
 }

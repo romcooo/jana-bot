@@ -3,12 +3,12 @@ package org.koppakurhiev.janabot.services.subgroups
 class SubGroup(
     val name: String,
     val chatId: Long,
-    val creatorId: Int,
+    val admins: MutableList<Int> = mutableListOf(),
     val members: MutableList<String> = mutableListOf(),
 ) {
 
     override fun toString(): String {
-        return "SubGroup(name='$name', chatId=$chatId, members=$members, creatorId=$creatorId)"
+        return "SubGroup(name='$name', chatId=$chatId, members=$members, admins=$admins)"
     }
 
     override fun equals(other: Any?): Boolean {

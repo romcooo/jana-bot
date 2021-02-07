@@ -48,6 +48,7 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
     }
 
     override suspend fun getAvailableBackups(listener: OperationResultListener): List<String> {
+        logger.debug { "Getting available backups. "}
         val sb = StringBuilder("Available backups: ")
         val list = mutableListOf<String>()
         withContext(Dispatchers.IO) {
@@ -62,7 +63,8 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
                 listener.onOperationDone("getAvailableBackups", false)
             }
         }
-        listener.onOperationDone(sb.toString(), true)
+        logger.debug { "Available backups retrieved: $sb" }
+        listener.onOperationDone("getAvailableBackups", true, list)
         return list
     }
 
