@@ -1,7 +1,7 @@
 package org.koppakurhiev.janabot.services.subgroups
 
 class SubGroup(
-    val name: String,
+    var name: String,
     val chatId: Long,
     val admins: MutableList<Int> = mutableListOf(),
     val members: MutableList<String> = mutableListOf(),
