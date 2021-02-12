@@ -11,12 +11,12 @@ repositories {
     mavenCentral()
     maven("https://jitpack.io")
     jcenter()
-    google()
 }
 
 dependencies {
     testImplementation(kotlin("test-junit"))
     implementation("com.github.elbekD:kt-telegram-bot:1.3.8")
+    // logging
     implementation("io.github.microutils:kotlin-logging:2.0.4")
     implementation("ch.qos.logback:logback-classic:1.3.0-alpha5")
     // json
@@ -29,6 +29,6 @@ tasks.test {
     useJUnit()
 }
 
-tasks.withType<KotlinCompile>() {
+tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "15"
 }

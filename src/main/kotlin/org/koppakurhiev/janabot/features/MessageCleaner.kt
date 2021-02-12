@@ -1,56 +1,49 @@
 package org.koppakurhiev.janabot.features
 
+import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
-import org.koppakurhiev.janabot.services.ALogged
+import org.koppakurhiev.janabot.utils.ALogged
 import java.util.*
 import kotlin.concurrent.schedule
 
-
-class MessageCleaner: ALogged() {
-
-    // not needed atm, but might be handy for retroactive deleting if needed (keep in mind it can only be deleted within 48 hours of posting)
-    private val livingMessageList: MutableList<LivingMessage> = mutableListOf()
+object MessageCleaner : ALogged() {
     private val timer = Timer()
 
-    fun registerMessage(livingMessage: LivingMessage) {
-        livingMessageList.add(livingMessage)
-
-        if (livingMessage.lifetime.length > 0) {
-            logger.info { "Scheduling message to be deleted: $livingMessage in ${livingMessage.lifetime.length / 1000} seconds." }
-            timer.schedule(livingMessage.lifetime.length) {
-                livingMessage.kill()
+    //TODO - thread safety.
+    fun registerMessage(message: Message, lifetime: MessageLifetime) {
+        if (lifetime != MessageLifetime.FOREVER) {
+            logger.trace { "Scheduling message to be deleted: $message in ${lifetime.length / 1000} seconds." }
+            timer.schedule(lifetime.length) {
+                logger.trace { "Deleting message: $message" }
+                JanaBot.bot.deleteMessage(message.chat.id, message.message_id)
             }
         }
     }
-
 }
 
+enum class MessageLifetime(
+    val length: Long
+) {
+    FOREVER(-1L),
 
-data class LivingMessage(val chatId: Any,
-                         val messageId: Int,
-                         val lifetime: MessageLifetime,
-                         val postedDate: Date = Date()) : ALogged() {
+    /**
+     * 1 hour
+     */
+    LONG(3600000L),
 
-    enum class MessageLifetime(private val defaultLength: Long,
-                               var length: Long = defaultLength) {
-        FOREVER(-1),
-        LONG(3600000), // 1 hour
-        MEDIUM(600000), // 10 minutes
-        SHORT(60000), // minute
-        FLASH(10000), // 10sec
-        DEFAULT(FOREVER.length);
+    /**
+     * 10 minutes
+     */
+    MEDIUM(600000L),
 
-        // You can technically change any of these at runtime by assigning a new value to MessageLifetime.CUSTOM.length
-        // This is the reason why there is the private default value - you can use reset() to reset one enum at a time
-        // Potentially can be done via a command in the future
-        fun reset() {
-            this.length = defaultLength
-        }
+    /**
+     * 1 minute
+     */
+    SHORT(60000L),
 
-    }
-
-    fun kill() {
-        logger.debug { "Deleting message: $this" }
-        JanaBot.bot.deleteMessage(chatId, messageId)
-    }
+    /**
+     * 10 seconds
+     */
+    FLASH(10000L),
+    DEFAULT(FOREVER.length);
 }

@@ -4,7 +4,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import org.koppakurhiev.janabot.persistence.Repository
-import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
 import org.koppakurhiev.janabot.persistence.SubGroupSimpleJsonRepository
 
 class SubGroupsManager {
@@ -47,19 +46,19 @@ class SubGroupsManager {
         }
     }
 
-    fun getBackups(listener: OperationResultListener) {
-        GlobalScope.launch {
-            repository.getAvailableBackups(listener)
-        }
+    suspend fun getBackups(): List<String> {
+        return repository.getAvailableBackups()
     }
 
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {
         if (getSubGroup(chatId, groupName) != null) return false
         logger.info { "Creating group $groupName for channel $chatId" }
-        return groups.add(SubGroup(
-            name = groupName,
-            chatId = chatId,
-            admins = if (fromId != null) mutableListOf(fromId) else mutableListOf())
+        return groups.add(
+            SubGroup(
+                name = groupName,
+                chatId = chatId,
+                admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
+            )
         ).andSave()
     }
 

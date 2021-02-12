@@ -2,22 +2,21 @@ package org.koppakurhiev.janabot.services.subgroups
 
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
-import org.koppakurhiev.janabot.SimpleConversationContext
-import org.koppakurhiev.janabot.features.LivingMessage
-import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
-import org.koppakurhiev.janabot.sendMessage
+import org.koppakurhiev.janabot.features.MessageCleaner
+import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
+import org.koppakurhiev.janabot.utils.SimpleConversationContext
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
     private lateinit var conversationContext: SimpleConversationContext
 
-    override fun onCommand(message: Message, s: String?) {
+    override suspend fun onCommand(message: Message, s: String?) {
         // TODO check thread safety
         conversationContext = SimpleConversationContext(message.chat.id, message.message_id)
         val words = message.text?.split(" ")
         logger.debug { "Executing command: $words" }
         if (words == null || words.size < 2) {
-            conversationContext.sendMessage(MessageProvider.noCommand(), lifetime = LivingMessage.MessageLifetime.SHORT)
+            conversationContext.sendMessage(MessageProvider.noCommand(), lifetime = MessageLifetime.SHORT)
             return
         }
         val targetGroupName: String? = if (words.size >= 3) words[2] else null
@@ -32,7 +31,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 "-delete" -> deleteSubGroup(targetGroupName, message)
                 "-members" -> getSubGroupMembers(targetGroupName, message)
                 "-list" -> getChatSubgroups(message)
-                // Use for testing purposes TODO - consider deleting later (but it is kind of useful)
+                // Use for testing purposes
                 "-listAll".toLowerCase() -> getAllSubGroups(message)
                 "-rename" -> renameSubGroup(targetGroupName, words[3], message) // TODO words[].. rework ??
                 "-backup", "-backups" -> {
@@ -51,7 +50,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                     logger.trace { "Unknown argument used: ${words[1]}" }
                     conversationContext.sendMessage(
                         text = MessageProvider.unrecognizedArgument(words[1]),
-                        lifetime = LivingMessage.MessageLifetime.SHORT
+                        lifetime = MessageLifetime.SHORT
                     )
                 }
             }
@@ -59,17 +58,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             logger.info { "Wrong number of arguments for given command $words" }
             conversationContext.sendMessage(
                 text = MessageProvider.notEnoughArguments(words[1]),
-                lifetime = LivingMessage.MessageLifetime.SHORT
+                lifetime = MessageLifetime.SHORT
             )
         }
-        JanaBot.messageCleaner.registerMessage(
-            LivingMessage(
-                chatId = message.chat.id,
-                messageId = message.message_id,
-                lifetime = LivingMessage.MessageLifetime.SHORT
-            )
+        MessageCleaner.registerMessage(
+            message, MessageLifetime.SHORT
         )
-
     }
 
     private fun createSubGroup(groupName: String?, message: Message) {
@@ -82,7 +76,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupExists(groupName)
             }
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     private fun joinSubGroup(groupName: String?, message: Message) {
@@ -96,7 +90,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userAddedToGroup(username, groupName)
             else -> MessageProvider.userInGroup(username, groupName)
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     // TODO currently not possible to validate, if the usernameToAdd is actually in the chat. Probably
@@ -112,7 +106,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userAddedToGroup(usernameToAdd, groupName)
             else -> MessageProvider.userInGroup(usernameToAdd, groupName)
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     private fun removeMember(groupName: String?, usernameToRemove: String?, message: Message) {
@@ -137,7 +131,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 }
             }
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     private fun leaveSubGroup(groupName: String?, message: Message) {
@@ -151,15 +145,14 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.userLeftGroup(username, groupName)
             else -> MessageProvider.userNotInGroup(username, groupName)
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     private fun renameSubGroup(oldGroupName: String?, newGroupName: String?, message: Message) {
         val text =
             if (oldGroupName.isNullOrEmpty() || newGroupName.isNullOrEmpty()) {
                 MessageProvider.noGroupName()
-            }
-            else {
+            } else {
                 val group = subGroupsManager.getSubGroup(message.chat.id, oldGroupName)
                 when {
                     (group == null) -> MessageProvider.groupNotFound(oldGroupName)
@@ -169,15 +162,17 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                         }
                         MessageProvider.noPrivileges(oldGroupName, adminUsernames)
                     }
-                    subGroupsManager.getSubGroup(message.chat.id, newGroupName) != null -> MessageProvider.groupExists(newGroupName)
-                    subGroupsManager.renameSubGroup(oldGroupName, newGroupName, message.chat.id) -> MessageProvider.groupRenamed(oldGroupName, newGroupName)
+                    subGroupsManager.getSubGroup(message.chat.id, newGroupName) != null ->
+                        MessageProvider.groupExists(newGroupName)
+                    subGroupsManager.renameSubGroup(oldGroupName, newGroupName, message.chat.id) ->
+                        MessageProvider.groupRenamed(oldGroupName, newGroupName)
                     else -> {
                         logger.warn { "Rename method failed, this should not happen" }
                         MessageProvider.groupNotFound(oldGroupName)
                     }
                 }
             }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
 
     }
 
@@ -200,7 +195,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 MessageProvider.groupNotFound(groupName)
             }
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.LONG)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.LONG)
     }
 
     private fun getSubGroupMembers(groupName: String?, message: Message) {
@@ -213,7 +208,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 else -> MessageProvider.subGroupString(groupName, members)
             }
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.SHORT)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.SHORT)
     }
 
     private fun getChatSubgroups(message: Message) {
@@ -231,7 +226,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             }
             MessageProvider.chatSubGroups(subGroupsString.toString())
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.SHORT)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.SHORT)
     }
 
     private fun getAllSubGroups(message: Message) {
@@ -241,7 +236,8 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         } else {
             "No groups currently exist anywhere."
         }
-        conversationContext.sendMessage(text, lifetime = LivingMessage.MessageLifetime.SHORT)
+        conversationContext.sendMessage(text, lifetime = MessageLifetime.SHORT)
+        MessageCleaner.registerMessage(message, MessageLifetime.SHORT)
     }
 
     // TODO add possibility to load a backup by passing a parameter
@@ -253,8 +249,14 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         subGroupsManager.saveBackup()
     }
 
-    private fun getAvailableBackups(message: Message) {
-        subGroupsManager.getBackups(AsyncResultListener(message.chat.id, message.message_id))
+    private suspend fun getAvailableBackups(message: Message) {
+        val backups = subGroupsManager.getBackups()
+        val text = if (backups.isEmpty()) {
+            MessageProvider.noBackups()
+        } else {
+            MessageProvider.availableBackups(backups)
+        }
+        conversationContext.sendMessage(text, MessageLifetime.SHORT)
     }
 
     object MessageProvider {
@@ -350,17 +352,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             return "Current groups in this chat are:\n$groups"
         }
 
-        fun repositoryOperationResult(operation: String, isSuccess: Boolean, data: List<String> = emptyList()): String {
-            val resultString = if (isSuccess) "success" else "failure"
-            return "Result of $operation is $resultString. $data"
+        fun availableBackups(backups: List<String>): String {
+            return "Currently active backups are : $backups"
         }
-    }
 
-    class AsyncResultListener(private val chatID: Long, private val triggerer: Int?): OperationResultListener {
-        override fun onOperationDone(operationName: String, isSuccess: Boolean, data: List<String>) {
-            // can't use context here since it's asynchronous and the variables are passed through
-            JanaBot.bot.sendMessage(chatID, MessageProvider.repositoryOperationResult(operationName, isSuccess, data),
-                replyTo = triggerer, lifetime = LivingMessage.MessageLifetime.MEDIUM)
+        fun noBackups(): String {
+            return "No backups are currently available."
         }
     }
 }

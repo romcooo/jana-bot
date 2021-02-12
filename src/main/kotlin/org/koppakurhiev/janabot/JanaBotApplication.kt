@@ -1,22 +1,18 @@
 package org.koppakurhiev.janabot
 
 import com.elbekD.bot.Bot
-import mu.KotlinLogging
-import org.koppakurhiev.janabot.features.MessageCleaner
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
+import org.koppakurhiev.janabot.utils.ALogged
+import org.koppakurhiev.janabot.utils.BotBuilder
 
 fun main() {
     JanaBot.launch()
 }
 
-object JanaBot {
-    private val logger = KotlinLogging.logger {}
-
+object JanaBot : ALogged() {
     lateinit var bot: Bot
-
-    lateinit var messageCleaner: MessageCleaner
 
     //Add services here when implemented
     val services = arrayOf<IBotService>(
@@ -29,7 +25,6 @@ object JanaBot {
         bot = botBuilder
             .withServices(services)
             .build()
-        messageCleaner = MessageCleaner()
         bot.start()
         logger.info("JanaBot started.")
     }

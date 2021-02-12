@@ -5,8 +5,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
-import org.koppakurhiev.janabot.services.ALogged
 import org.koppakurhiev.janabot.services.subgroups.SubGroup
+import org.koppakurhiev.janabot.utils.ALogged
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -25,7 +25,7 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
     override suspend fun save(t: List<SubGroup>, listener: OperationResultListener?) {
         logger.info { "Saving: $t" }
         val result = storeData(t, _filePath)
-        listener?.onOperationDone("save", result)
+        listener?.onOperationDone(result)
     }
 
     // TODO add possible "from"
@@ -35,7 +35,7 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
             logger.info { "Loaded: $groups" }
             groups
         } catch (e: IOException) {
-            logger.info { "Can't load, returning empty list: ${e.message}"}
+            logger.warn { "Can't load, returning empty list: ${e.message}" }
             emptyList()
         }
     }
@@ -43,12 +43,12 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
     override suspend fun backup(t: List<SubGroup>?, listener: OperationResultListener?) {
         val sdf = SimpleDateFormat(_dateFormat)
         val result = storeData(t ?: load(), _backupPath + sdf.format(Date()) + _backupFileName)
-        listener?.onOperationDone("backup", result)
+        listener?.onOperationDone(result)
         cleanBackups()
     }
 
-    override suspend fun getAvailableBackups(listener: OperationResultListener): List<String> {
-        logger.debug { "Getting available backups. "}
+    override suspend fun getAvailableBackups(listener: OperationResultListener?): List<String> {
+        logger.debug { "Getting available backups." }
         val sb = StringBuilder("Available backups: ")
         val list = mutableListOf<String>()
         withContext(Dispatchers.IO) {
@@ -60,16 +60,12 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
                         list.add(item.fileName.toString())
                     }
             } catch (e: IOException) {
-                listener.onOperationDone("getAvailableBackups", false)
+                listener?.onOperationDone(false)
             }
         }
         logger.debug { "Available backups retrieved: $sb" }
-        listener.onOperationDone("getAvailableBackups", true, list)
+        listener?.onOperationDone(true, list)
         return list
-    }
-
-    override suspend fun loadBackup(fileName: String): List<SubGroup> {
-        TODO("Not yet implemented")
     }
 
     private suspend fun storeData(t: List<SubGroup>, fileName: String): Boolean {
@@ -103,6 +99,5 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
             }
             logger.info { "Cleaned up $delCount files." }
         }
-
     }
 }

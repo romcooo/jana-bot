@@ -1,9 +1,11 @@
-package org.koppakurhiev.janabot
+package org.koppakurhiev.janabot.utils
 
 import com.elbekD.bot.Bot
 import com.elbekD.bot.types.MessageEntity
 import com.elbekD.bot.types.ReplyKeyboard
-import org.koppakurhiev.janabot.features.LivingMessage
+import org.koppakurhiev.janabot.JanaBot
+import org.koppakurhiev.janabot.features.MessageCleaner
+import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.IBotService
 
 
@@ -53,31 +55,38 @@ fun Bot.sendMessage(
     replyTo: Int? = null,
     allowSendingWithoutReply: Boolean? = null,
     markup: ReplyKeyboard? = null,
-    lifetime: LivingMessage.MessageLifetime = LivingMessage.MessageLifetime.DEFAULT): Any {
+    lifetime: MessageLifetime = MessageLifetime.DEFAULT
+): Any {
 
     // the extended function is called here, no recursion
-    val sentMessage = sendMessage(chatId, text, parseMode, entities, disableWebPagePreview, disableNotification, replyTo, allowSendingWithoutReply, markup)
+    val sentMessage = sendMessage(
+        chatId,
+        text,
+        parseMode,
+        entities,
+        disableWebPagePreview,
+        disableNotification,
+        replyTo,
+        allowSendingWithoutReply,
+        markup
+    )
 
-    val messageCleaner = JanaBot.messageCleaner
     sentMessage.whenComplete { message, _ ->
-        messageCleaner.registerMessage(
-            LivingMessage(
-                chatId = chatId,
-                messageId = message.message_id,
-                lifetime = lifetime
-            )
-        )
+        MessageCleaner.registerMessage(message, lifetime)
     }
     return sentMessage
 }
 
-class SimpleConversationContext(val chatId: Any,
-                                val triggerMessageId: Int?) {
-    fun sendMessage(text: String, lifetime: LivingMessage.MessageLifetime? = null) {
-        if (lifetime == null) {
-            JanaBot.bot.sendMessage(chatId = chatId, text = text, replyTo = triggerMessageId)
-        } else {
-            JanaBot.bot.sendMessage(chatId = chatId, text = text, replyTo = triggerMessageId, lifetime = lifetime)
-        }
+class SimpleConversationContext(
+    val chatId: Any,
+    val triggerMessageId: Int?
+) {
+    fun sendMessage(text: String, lifetime: MessageLifetime? = null) {
+        JanaBot.bot.sendMessage(
+            chatId = chatId,
+            text = text,
+            replyTo = triggerMessageId,
+            lifetime = lifetime ?: MessageLifetime.DEFAULT
+        )
     }
 }
