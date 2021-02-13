@@ -21,9 +21,10 @@ object MessageCleaner : ALogged() {
     }
 }
 
-enum class MessageLifetime(
-    val length: Long
-) {
+enum class MessageLifetime(val length: Long) {
+    /**
+     * The message will not be deleted
+     */
     FOREVER(-1L),
 
     /**
@@ -45,5 +46,9 @@ enum class MessageLifetime(
      * 10 seconds
      */
     FLASH(10000L),
+
+    /**
+     * Default message lifetime, currently [FOREVER]
+     */
     DEFAULT(FOREVER.length);
 }

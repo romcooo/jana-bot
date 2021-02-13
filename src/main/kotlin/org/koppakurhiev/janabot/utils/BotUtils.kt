@@ -7,17 +7,16 @@ import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.MessageCleaner
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.IBotService
+import java.util.*
 
 
-class BotBuilder(constType: ConstructionType = ConstructionType.POLLING) {
-
-    companion object {
-        private var BOT_USERNAME = System.getenv("janaBotUsername")
-        private var BOT_TOKEN = System.getenv("janaBotToken")
-    }
+class BotBuilder(properties: Properties, constType: ConstructionType = ConstructionType.POLLING) {
 
     private val bot: Bot = when (constType) {
-        ConstructionType.POLLING -> Bot.createPolling(BOT_USERNAME, BOT_TOKEN)
+        ConstructionType.POLLING -> Bot.createPolling(
+            properties.getProperty("bot.username"),
+            properties.getProperty("bot.token")
+        )
         ConstructionType.WEBHOOK -> TODO("Implement web hook bot creation")
     }
 

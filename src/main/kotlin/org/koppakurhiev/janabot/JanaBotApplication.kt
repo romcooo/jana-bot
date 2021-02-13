@@ -6,6 +6,8 @@ import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
 import org.koppakurhiev.janabot.utils.ALogged
 import org.koppakurhiev.janabot.utils.BotBuilder
+import java.io.FileInputStream
+import java.util.*
 
 fun main() {
     JanaBot.launch()
@@ -13,6 +15,7 @@ fun main() {
 
 object JanaBot : ALogged() {
     lateinit var bot: Bot
+    val properties = Properties()
 
     //Add services here when implemented
     val services = arrayOf<IBotService>(
@@ -21,7 +24,8 @@ object JanaBot : ALogged() {
     )
 
     fun launch() {
-        val botBuilder = BotBuilder()
+        properties.load(FileInputStream("src/main/resources/config.properties"))
+        val botBuilder = BotBuilder(properties)
         bot = botBuilder
             .withServices(services)
             .build()
