@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.persistence.Repository.OperationResultListener
 import org.koppakurhiev.janabot.services.subgroups.SubGroup
 import org.koppakurhiev.janabot.utils.ALogged
@@ -16,8 +17,8 @@ import java.util.*
 
 
 class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
-    private val _filePath = "src/main/resources/groups.json"
-    private val _backupPath = "src/main/resources/backup/"
+    private val _filePath = JanaBot.properties.getProperty("groups.dataFolder") + "/groups.json"
+    private val _backupPath = JanaBot.properties.getProperty("groups.backupFolder")
     private val _backupFileName = "groups_backup.json"
     private val _dateFormat = "yyyyMMdd-hhmmss"
     private val _maxBackups = 3

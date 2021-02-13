@@ -1,7 +1,6 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "1.4.21"
+    application
 }
 
 group = "sk.koppakurhiev"
@@ -10,11 +9,12 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     maven("https://jitpack.io")
-    jcenter()
 }
 
 dependencies {
-    testImplementation(kotlin("test-junit"))
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    // bot
     implementation("com.github.elbekD:kt-telegram-bot:1.3.8")
     // logging
     implementation("io.github.microutils:kotlin-logging:2.0.4")
@@ -25,10 +25,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
 }
 
-tasks.test {
-    useJUnit()
+application {
+    mainClass.set("org.koppakurhiev.janabot.JanaBotApplicationKt")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "15"
+tasks.test {
+    useJUnit()
 }

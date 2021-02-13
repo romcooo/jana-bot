@@ -31,7 +31,7 @@ class DefaultServices : ABotService() {
     class Help : ACommand("/help") {
         override suspend fun onCommand(message: Message, s: String?) {
             val messageBuilder = StringBuilder("Currently available commands are:")
-            JanaBot.services.forEach {
+            JanaBot.getServices().forEach {
                 if (it.help().isNotBlank()) {
                     messageBuilder.appendLine(it.help())
                 }

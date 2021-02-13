@@ -153,3 +153,4 @@ gradle-app.setting
 
 /src/main/resources/groups.json
 /src/main/resources/config.properties
+/data/
