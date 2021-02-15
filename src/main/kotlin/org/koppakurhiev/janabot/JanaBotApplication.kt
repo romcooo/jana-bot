@@ -6,6 +6,7 @@ import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
 import org.koppakurhiev.janabot.utils.ALogged
 import org.koppakurhiev.janabot.utils.BotBuilder
+import org.koppakurhiev.janabot.features.StringProvider
 import java.util.*
 
 fun main() {
@@ -14,6 +15,7 @@ fun main() {
 
 object JanaBot : ALogged() {
     lateinit var bot: Bot
+    lateinit var messages: StringProvider
     val properties = Properties()
 
     //Add services here when implemented
@@ -32,6 +34,7 @@ object JanaBot : ALogged() {
         bot = botBuilder
             .withServices(getServices())
             .build()
+        messages = StringProvider("en")
         bot.start()
         logger.info("JanaBot started.")
     }

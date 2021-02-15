@@ -21,7 +21,7 @@ class SubGroupsManager {
             groups = try {
                 repository.load() as MutableList<SubGroup>
             } catch (e: ClassCastException) {
-                logger.debug { "Problem loading groups, probably empty datasource: ${e.message}" }
+                logger.warn { "Problem loading groups, probably empty datasource: ${e.message}" }
                 mutableListOf()
             }
         }
@@ -52,7 +52,7 @@ class SubGroupsManager {
 
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {
         if (getSubGroup(chatId, groupName) != null) return false
-        logger.info { "Creating group $groupName for channel $chatId" }
+        logger.debug { "Creating group $groupName for channel $chatId" }
         return groups.add(
             SubGroup(
                 name = groupName,
@@ -109,6 +109,7 @@ class SubGroupsManager {
     }
 
     fun getAllGroups(): List<SubGroup> {
+        logger.trace { "Getting all groups" }
         return groups
     }
 

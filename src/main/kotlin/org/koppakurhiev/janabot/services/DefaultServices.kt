@@ -30,7 +30,7 @@ class DefaultServices : ABotService() {
 
     class Help : ACommand("/help") {
         override suspend fun onCommand(message: Message, s: String?) {
-            val messageBuilder = StringBuilder("Currently available commands are:")
+            val messageBuilder = StringBuilder(JanaBot.messages.get("help.beginning"))
             JanaBot.getServices().forEach {
                 if (it.help().isNotBlank()) {
                     messageBuilder.appendLine(it.help())
@@ -50,7 +50,7 @@ class DefaultServices : ABotService() {
         }
 
         override fun help(): String {
-            return "/help - get this message again"
+            return JanaBot.messages.get("help.help")
         }
     }
 
@@ -58,14 +58,14 @@ class DefaultServices : ABotService() {
         override suspend fun onCommand(message: Message, s: String?) {
             JanaBot.bot.sendMessage(
                 message.chat.id,
-                "Hi, ${message.from?.first_name ?: "person (it looks like you don't have a first_name)"}!",
+                JanaBot.messages.get("start.text", message.from?.first_name ?: "person"),
                 replyTo = message.message_id
             )
             logger.debug { "/start command executed in channel " + message.chat.id }
         }
 
         override fun help(): String {
-            return "/start - say hello to your new bot"
+            return JanaBot.messages.get("start.help")
         }
     }
 }

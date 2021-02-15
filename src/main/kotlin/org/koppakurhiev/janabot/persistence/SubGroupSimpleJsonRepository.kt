@@ -15,7 +15,6 @@ import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
 
-
 class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
     private val _filePath = JanaBot.properties.getProperty("groups.dataFolder") + "/groups.json"
     private val _backupPath = JanaBot.properties.getProperty("groups.backupFolder")

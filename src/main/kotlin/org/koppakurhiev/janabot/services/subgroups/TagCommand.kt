@@ -1,6 +1,7 @@
 package org.koppakurhiev.janabot.services.subgroups
 
 import com.elbekD.bot.types.Message
+import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
 import org.koppakurhiev.janabot.utils.SimpleConversationContext
@@ -15,13 +16,13 @@ class TagCommand(private val subGroupsManager: SubGroupsManager) : ABotService.A
         if (words != null) {
             val text = tagMembers(subGroupsManager, message.chat.id, *words.toTypedArray())
             conversationContext.sendMessage(
-                text ?: "No people selected with given groups: $words",
+                text ?: JanaBot.messages.get("tag.noPeopleSelected", words.toString()),
                 lifetime = if (text == null) MessageLifetime.MEDIUM
                 else MessageLifetime.FOREVER
             )
         } else {
             conversationContext.sendMessage(
-                "Invalid command format!\nUse /tag <group-name> ..",
+                JanaBot.messages.get("tag.invalidFormat"),
                 lifetime = MessageLifetime.SHORT
             )
         }

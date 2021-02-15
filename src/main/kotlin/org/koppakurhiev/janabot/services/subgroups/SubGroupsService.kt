@@ -13,19 +13,7 @@ class SubGroupsService : ABotService() {
 
     override fun help(): String {
         logger.trace { "SubGroup help called" }
-        return "/tag <group-name> : tag all people within the sub-group\n" +
-                "/group <action> : possible actions:\n" +
-                "    -create <group-name> : create new chat sub-group \n" +
-                "    -join <group-name> : join the <group-name> sub-group\n" +
-                "    -leave <group-name> : leave the <group-name> sub-group\n" +
-                "    -delete <group-name> : delete the <group-name> sub-group (available to admins only)\n" +
-                "    -rename <group-name> <new-name> : renames the <group-name> sub-group (available to admins only)\n" +
-                "    -kick <group-name> <username> : removes the <username> from the <group-name> sub-group (available to admins only)\n" +
-                "    -members <group-name> : lists the members of sub-group <group-name>\n" +
-                "    -list : list all the sub-groups  within this chat\n" +
-                "    -listAll : lists all groups recognised by this bot\n" +
-                "    -backup -save : forces a backup save of current groups\n" +
-                "    -backup -list : lists all stored backup file names (with date and time)\n"
+        return JanaBot.messages.get("group.help")
     }
 
     override fun getCommands(): Array<IBotService.ICommand> {
