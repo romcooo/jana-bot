@@ -2,9 +2,8 @@ package org.koppakurhiev.janabot.services
 
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
-import org.koppakurhiev.janabot.features.MessageCleaner
+import org.koppakurhiev.janabot.features.Conversation
 import org.koppakurhiev.janabot.features.MessageLifetime
-import org.koppakurhiev.janabot.utils.sendMessage
 
 class DefaultServices : ABotService() {
 
@@ -17,35 +16,17 @@ class DefaultServices : ABotService() {
         return commands
     }
 
-    override fun help(): String {
-        val helpBuilder = StringBuilder()
-        commands.forEach {
-            if (it.help().isNotBlank()) {
-                helpBuilder.append("\n")
-                helpBuilder.append(it.help())
-            }
-        }
-        return helpBuilder.toString()
-    }
-
     class Help : ACommand("/help") {
         override suspend fun onCommand(message: Message, s: String?) {
+            val conversation = Conversation(message)
             val messageBuilder = StringBuilder(JanaBot.messages.get("help.beginning"))
             JanaBot.getServices().forEach {
                 if (it.help().isNotBlank()) {
                     messageBuilder.appendLine(it.help())
                 }
             }
-            JanaBot.bot.sendMessage(
-                message.chat.id,
-                messageBuilder.toString(),
-                replyTo = message.message_id,
-                lifetime = MessageLifetime.SHORT
-            )
-            // delete triggering message as well
-            MessageCleaner.registerMessage(
-                message, MessageLifetime.SHORT
-            )
+            conversation.sendMessage(messageBuilder.toString())
+            conversation.burnConversation(MessageLifetime.SHORT)
             logger.debug { "/help command executed in channel " + message.chat.id }
         }
 
@@ -56,11 +37,8 @@ class DefaultServices : ABotService() {
 
     class Start : ABotService.ACommand("/start") {
         override suspend fun onCommand(message: Message, s: String?) {
-            JanaBot.bot.sendMessage(
-                message.chat.id,
-                JanaBot.messages.get("start.text", message.from?.first_name ?: "person"),
-                replyTo = message.message_id
-            )
+            val conversation = Conversation(message)
+            conversation.sendMessage(JanaBot.messages.get("start.text", message.from?.first_name ?: "person"))
             logger.debug { "/start command executed in channel " + message.chat.id }
         }
 

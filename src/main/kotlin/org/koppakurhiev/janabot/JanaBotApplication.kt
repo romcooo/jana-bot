@@ -1,12 +1,12 @@
 package org.koppakurhiev.janabot
 
 import com.elbekD.bot.Bot
+import org.koppakurhiev.janabot.features.StringProvider
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
 import org.koppakurhiev.janabot.utils.ALogged
 import org.koppakurhiev.janabot.utils.BotBuilder
-import org.koppakurhiev.janabot.features.StringProvider
 import java.util.*
 
 fun main() {

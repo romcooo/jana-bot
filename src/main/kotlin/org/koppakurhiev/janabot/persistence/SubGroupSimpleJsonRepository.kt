@@ -72,7 +72,8 @@ class SubGroupSimpleJsonRepository : ALogged(), Repository<SubGroup> {
         val mapper = jacksonObjectMapper()
         return withContext(Dispatchers.IO) {
             val data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(t)
-            logger.debug { "Writing data: $data" }
+            logger.info { "Saving database" }
+            logger.trace { "Writing data: $data" }
             try {
                 val file = File(fileName)
                 if (!file.parentFile.exists()) {
