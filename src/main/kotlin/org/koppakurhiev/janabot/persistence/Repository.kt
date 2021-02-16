@@ -7,12 +7,9 @@ interface Repository<T> {
     suspend fun save(t: List<T>, listener: OperationResultListener? = null)
     suspend fun load(from: String? = null): List<T>
     suspend fun backup(t: List<SubGroup>? = null, listener: OperationResultListener? = null)
-    suspend fun getAvailableBackups(listener: OperationResultListener): List<String>
-    suspend fun loadBackup(fileName: String): List<T>
+    suspend fun getAvailableBackups(listener: OperationResultListener? = null): List<String>
 
     interface OperationResultListener {
-        fun onOperationDone(operationName: String = "??", isSuccess: Boolean, data: List<String> = emptyList())
+        fun onOperationDone(isSuccess: Boolean, data: List<String> = emptyList())
     }
 }
-
-

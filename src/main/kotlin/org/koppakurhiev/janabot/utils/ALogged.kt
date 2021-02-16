@@ -1,4 +1,4 @@
-package org.koppakurhiev.janabot.services
+package org.koppakurhiev.janabot.utils
 
 import mu.KotlinLogging
 

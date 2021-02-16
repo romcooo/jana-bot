@@ -150,3 +150,7 @@ gradle-app.setting
 **/build/
 
 # End of https://www.toptal.com/developers/gitignore/api/kotlin,jetbrains
+
+/src/main/resources/groups.json
+/src/main/resources/config.properties
+/data/
