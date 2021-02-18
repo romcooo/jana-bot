@@ -20,7 +20,7 @@ class BotBuilder(properties: Properties, constType: ConstructionType = Construct
         }
     }
 
-    fun withServices(services: Array<IBotService>): BotBuilder {
+    fun withServices(services: Set<IBotService>): BotBuilder {
         services.forEach {
             registerCommands(it.getCommands())
             bot.onMessage(it::onMessage)

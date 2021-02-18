@@ -9,7 +9,6 @@ import kotlin.concurrent.schedule
 object MessageCleaner : ALogged() {
     private val timer = Timer()
 
-    //TODO - thread safety.
     fun registerMessage(message: Message, lifetime: MessageLifetime) {
         if (lifetime != MessageLifetime.FOREVER) {
             logger.trace { "Scheduling message to be deleted: $message in ${lifetime.length / 1000} seconds." }

@@ -1,15 +1,9 @@
 package org.koppakurhiev.janabot.persistence
 
-import org.koppakurhiev.janabot.services.subgroups.SubGroup
-
 
 interface Repository<T> {
-    suspend fun save(t: List<T>, listener: OperationResultListener? = null)
-    suspend fun load(from: String? = null): List<T>
-    suspend fun backup(t: List<SubGroup>? = null, listener: OperationResultListener? = null)
-    suspend fun getAvailableBackups(listener: OperationResultListener? = null): List<String>
-
-    interface OperationResultListener {
-        fun onOperationDone(isSuccess: Boolean, data: List<String> = emptyList())
-    }
+    fun save(data: List<T>, backup: Boolean = true): Boolean
+    fun load(sourceIndex : Int? = null): List<T>?
+    fun getAvailableBackups(): List<String>
+    fun load(filePath: String): List<T>?
 }

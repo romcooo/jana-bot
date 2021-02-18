@@ -5,21 +5,30 @@ import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
+import org.koppakurhiev.janabot.utils.getArg
 
 class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/backup") {
+
     override suspend fun onCommand(message: Message, s: String?) {
         val conversation = Conversation(message)
         val args = message.text?.split(" ")?.drop(1)
         if (args == null || args.isEmpty()) {
-            conversation.sendMessage(JanaBot.messages.get("backup.unknownCommand"))
-            conversation.burnConversation(MessageLifetime.SHORT)
+            conversation.sendMessage(JanaBot.messages.get("backup.noCommand"))
+            conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
-        when(args[0]) {
-            "-save" -> backupSubGroups()
+        when (args[0]) {
+            "-save" -> backupSubGroups(conversation)
             "-list" -> getAvailableBackups(conversation)
-            "-load" -> loadSubGroups()
-            "-help" -> help()
+            "-load" -> loadSubGroups(args, conversation)
+            "-help" -> {
+                conversation.sendMessage(help())
+                conversation.burnConversation(MessageLifetime.SHORT)
+            }
+            else -> {
+                conversation.sendMessage(JanaBot.messages.get("backup.unknownCommand", args[0]))
+                conversation.burnConversation(MessageLifetime.FLASH)
+            }
         }
     }
 
@@ -27,22 +36,52 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
         return JanaBot.messages.get("backup.help")
     }
 
-    private fun loadSubGroups() {
-        subGroupsManager.load()
-    }
-
-    private fun backupSubGroups() {
-        subGroupsManager.saveBackup()
-    }
-
-    private suspend fun getAvailableBackups(conversation: Conversation) {
-        val backups = subGroupsManager.getBackups()
-        val text = if (backups.isEmpty()) {
-            JanaBot.messages.get("backup.none")
+    private suspend fun loadSubGroups(args: List<String>, conversation: Conversation) {
+        val index = args.getArg(1)?.toIntOrNull()
+        if (index != null && index > subGroupsManager.getAvailableBackups().size) {
+            conversation.sendMessage(JanaBot.messages.get("backup.unknownIndex", index))
+        }
+        val operationResult = if (index == null || index < 1) {
+            subGroupsManager.load()
         } else {
-            JanaBot.messages.get("backup.active", backups.toString())
+            subGroupsManager.load(index)
+        }
+        val text = when (operationResult) {
+            SubGroupsManager.OperationResult.LOAD_FAILED -> {
+                logger.error { "Backup load failed!" }
+                JanaBot.messages.get("db.loadFailed")
+            }
+            else -> {
+                JanaBot.messages.get("db.loadSucceeded")
+            }
         }
         conversation.sendMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
+    }
+
+    private suspend fun backupSubGroups(conversation: Conversation) {
+        val text = when (subGroupsManager.save(true)) {
+            SubGroupsManager.OperationResult.SAVE_FAILED -> {
+                logger.error { "Backup save failed!" }
+                JanaBot.messages.get("db.saveFailed")
+            }
+            else -> {
+                JanaBot.messages.get("db.saveSucceeded")
+            }
+        }
+        conversation.sendMessage(text)
+        conversation.burnConversation(MessageLifetime.SHORT)
+    }
+
+    private suspend fun getAvailableBackups(conversation: Conversation) {
+        val backups = subGroupsManager.getAvailableBackups().mapIndexed { index, backup -> "${index + 1} -> $backup" }
+        val text = if (backups.isEmpty()) {
+            JanaBot.messages.get("backup.none")
+        } else {
+            //TODO format
+            JanaBot.messages.get("backup.active", backups.joinToString(separator = "\n"))
+        }
+        conversation.sendMessage(text)
+        conversation.burnConversation(MessageLifetime.MEDIUM)
     }
 }

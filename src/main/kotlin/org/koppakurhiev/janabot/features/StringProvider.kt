@@ -14,7 +14,7 @@ class StringProvider(localeId: String) : ALogged() {
         logger.info { "${locale.name} locale loaded" }
     }
 
-    fun get(@PropertyKey(resourceBundle = "strings") key: String, vararg args: String): String {
+    fun get(@PropertyKey(resourceBundle = "strings") key: String, vararg args: Any?): String {
         val message = messages.getProperty(key)
         return message.format(*args)
     }
