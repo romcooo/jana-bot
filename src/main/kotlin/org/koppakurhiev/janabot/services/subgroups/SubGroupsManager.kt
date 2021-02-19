@@ -1,78 +1,60 @@
 package org.koppakurhiev.janabot.services.subgroups
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import mu.KotlinLogging
-import org.koppakurhiev.janabot.persistence.Repository
-import org.koppakurhiev.janabot.persistence.SubGroupSimpleJsonRepository
+import org.koppakurhiev.janabot.utils.ALogged
 
-class SubGroupsManager {
-    private val logger = KotlinLogging.logger {}
+class SubGroupsManager : ALogged() {
+
+    @Volatile
     private lateinit var groups: MutableList<SubGroup>
-    private val repository: Repository<SubGroup> = SubGroupSimpleJsonRepository()
+    private val repository = SubGroupRepository("groups", "groups")
 
     init {
         load()
     }
 
-    fun load() {
+    fun load(sourceIndex: Int? = null): OperationResult {
         logger.debug { "Loading groups" }
-        GlobalScope.launch {
-            groups = try {
-                repository.load() as MutableList<SubGroup>
-            } catch (e: ClassCastException) {
-                logger.warn { "Problem loading groups, probably empty datasource: ${e.message}" }
-                mutableListOf()
-            }
-        }
+        val loadResult: List<SubGroup>? = repository.load(sourceIndex)
+        groups = loadResult?.toMutableList() ?: mutableListOf()
+        return if (loadResult == null) OperationResult.LOAD_FAILED else OperationResult.SUCCESS
     }
 
-    private fun save() {
+    fun save(backup: Boolean = false): OperationResult {
         logger.debug { "Saving groups" }
-        GlobalScope.launch {
-            repository.save(groups)
-        }
+        return if (repository.save(groups, backup)) OperationResult.SUCCESS else OperationResult.SAVE_FAILED
     }
 
-    private inline fun <reified T> T.andSave(): T {
-        save()
-        return this
-    }
-
-    fun saveBackup() {
-        logger.info { "Backing up groups" }
-        GlobalScope.launch {
-            repository.backup(groups)
-        }
-    }
-
-    suspend fun getBackups(): List<String> {
+    fun getAvailableBackups(): List<String> {
         return repository.getAvailableBackups()
     }
 
-    fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): Boolean {
-        if (getSubGroup(chatId, groupName) != null) return false
+    fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): OperationResult {
+        if (getSubGroup(chatId, groupName) != null) return OperationResult.GROUP_ALREADY_EXISTS
         logger.debug { "Creating group $groupName for channel $chatId" }
-        return groups.add(
-            SubGroup(
-                name = groupName,
-                chatId = chatId,
-                admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
+        if (!groups.add(
+                SubGroup(
+                    name = groupName,
+                    chatId = chatId,
+                    admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
+                )
             )
-        ).andSave()
+        ) return OperationResult.UNKNOWN_ERROR
+        return save()
     }
 
-    fun addMember(groupName: String, chatId: Long, username: String): Boolean {
-        val currentGroup = getSubGroup(chatId, groupName) ?: return false
-        if (currentGroup.members.contains(username)) return false
+    fun addMember(groupName: String, chatId: Long, username: String): OperationResult {
+        val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
+        if (currentGroup.members.contains(username)) return OperationResult.GROUP_CONTAINS_MEMBER
         logger.debug { "User $username added to the group $groupName" }
-        return currentGroup.members.add(username).andSave()
+        if (!currentGroup.members.add(username)) return OperationResult.UNKNOWN_ERROR
+        return save()
     }
 
-    fun removeMember(groupName: String, chatId: Long, username: String): Boolean {
-        val currentGroup = getSubGroup(chatId, groupName) ?: return false
+    fun removeMember(groupName: String, chatId: Long, username: String): OperationResult {
+        val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
         logger.debug { "User $username removed from the group $groupName" }
-        return currentGroup.members.remove(username).andSave()
+        if (!currentGroup.members.remove(username)) return OperationResult.GROUP_MISSING_MEMBER
+        return save()
     }
 
     fun getSubGroup(chatId: Long, groupName: String, ignoreCase: Boolean = true): SubGroup? {
@@ -80,21 +62,21 @@ class SubGroupsManager {
         return groups.firstOrNull { g -> g.chatId == chatId && g.name.equals(groupName, ignoreCase = ignoreCase) }
     }
 
-    fun renameSubGroup(oldGroupName: String, newGroupName: String, chatId: Long): Boolean {
-        val currentGroup = getSubGroup(chatId, oldGroupName) ?: return false
+    fun renameSubGroup(oldGroupName: String, newGroupName: String, chatId: Long): OperationResult {
+        val currentGroup = getSubGroup(chatId, oldGroupName) ?: return OperationResult.GROUP_NOT_FOUND
         if (groups.find { it.name.equals(oldGroupName, ignoreCase = true) } == null) {
-            return false
+            return OperationResult.GROUP_ALREADY_EXISTS
         }
         logger.debug { "Renaming group $oldGroupName to $newGroupName" }
         currentGroup.name = newGroupName
-        save()
-        return true
+        return save()
     }
 
-    fun deleteSubGroup(groupName: String, chatId: Long): Boolean {
-        val currentGroup = getSubGroup(chatId, groupName) ?: return false
+    fun deleteSubGroup(groupName: String, chatId: Long): OperationResult {
+        val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
         logger.debug { "Group $groupName deleted" }
-        return groups.remove(currentGroup).andSave()
+        if (!groups.remove(currentGroup)) return OperationResult.UNKNOWN_ERROR
+        return save()
     }
 
     fun getMembersList(groupName: String, chatId: Long): List<String>? {
@@ -113,13 +95,27 @@ class SubGroupsManager {
         return groups
     }
 
-    // TODO consider moving the result responsibility here and based on this Command will only show message
-    enum class SubGroupOperationResult {
-        GROUP_NAME_NOT_FOUND,
-        GROUP_NAME_ALREADY_EXISTS,
-        GROUP_DOES_NOT_CONTAIN_MEMBER,
-        GROUP_ALREADY_CONTAINS_MEMBER,
-        NO_PRIVILEGE,
+    fun getAdmins(chatId: Long, groupName: String): List<Int>? {
+        val currentGroup = getSubGroup(chatId, groupName)
+        return currentGroup?.admins
+    }
+
+    fun isGroupAdmin(chatId: Long, groupName: String, userId: Int): OperationResult {
+        val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
+        if (currentGroup.admins.isEmpty()) return OperationResult.SUCCESS
+        if (!currentGroup.admins.contains(userId)) return OperationResult.NOT_GROUP_ADMIN
+        return OperationResult.SUCCESS
+    }
+
+    enum class OperationResult {
+        GROUP_NOT_FOUND,
+        GROUP_ALREADY_EXISTS,
+        GROUP_MISSING_MEMBER,
+        GROUP_CONTAINS_MEMBER,
+        NOT_GROUP_ADMIN,
+        LOAD_FAILED,
+        SAVE_FAILED,
+        UNKNOWN_ERROR,
         SUCCESS
     }
 }

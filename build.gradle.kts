@@ -4,11 +4,12 @@ plugins {
 }
 
 group = "sk.koppakurhiev"
-version = "1.0-SNAPSHOT"
+version = "1.0"
 
 repositories {
     mavenCentral()
     maven("https://jitpack.io")
+    jcenter()
 }
 
 dependencies {
@@ -20,7 +21,7 @@ dependencies {
     implementation("io.github.microutils:kotlin-logging:2.0.4")
     implementation("ch.qos.logback:logback-classic:1.3.0-alpha5")
     // json
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.+")
+    implementation("com.beust:klaxon:5.0.1")
     // coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
 }

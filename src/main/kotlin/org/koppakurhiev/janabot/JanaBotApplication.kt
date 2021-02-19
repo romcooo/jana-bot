@@ -16,25 +16,28 @@ fun main() {
 object JanaBot : ALogged() {
     lateinit var bot: Bot
     lateinit var messages: StringProvider
+    lateinit var services: Set<IBotService>
     val properties = Properties()
 
     //Add services here when implemented
-    fun getServices(): Array<IBotService> {
-        return arrayOf(
+    private fun buildServices() {
+        val localServices = setOf(
             DefaultServices(),
             SubGroupsService(),
         )
+        services = localServices
     }
 
     fun launch() {
         val configStream = javaClass.getResourceAsStream("/config.properties")
+        //IMPORTANT be careful with initialization order
         properties.load(configStream)
         configStream.close()
-        val botBuilder = BotBuilder(properties)
-        bot = botBuilder
-            .withServices(getServices())
-            .build()
         messages = StringProvider("en")
+        buildServices()
+        bot = BotBuilder(properties)
+            .withServices(services)
+            .build()
         bot.start()
         logger.info("JanaBot started.")
     }
