@@ -78,7 +78,6 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
         val text = if (backups.isEmpty()) {
             JanaBot.messages.get("backup.none")
         } else {
-            //TODO format
             JanaBot.messages.get("backup.active", backups.joinToString(separator = "\n"))
         }
         conversation.sendMessage(text)

@@ -23,19 +23,19 @@ object JanaBot : ALogged() {
     private fun buildServices() {
         val localServices = setOf(
             DefaultServices(),
-            SubGroupsService()
+            SubGroupsService(),
         )
         services = localServices
     }
 
     fun launch() {
         val configStream = javaClass.getResourceAsStream("/config.properties")
+        //IMPORTANT be careful with initialization order
         properties.load(configStream)
         configStream.close()
         messages = StringProvider("en")
         buildServices()
-        val botBuilder = BotBuilder(properties)
-        bot = botBuilder
+        bot = BotBuilder(properties)
             .withServices(services)
             .build()
         bot.start()
