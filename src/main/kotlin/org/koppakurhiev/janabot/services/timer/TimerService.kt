@@ -23,6 +23,9 @@ class TimerService : ABotService() {
     }
 
     class TimerCommand(private val timerManager: TimerManager) : ABotService.ACommand("/timer") {
+
+        private var lastReset : Conversation? = null
+
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
             val args = message.text?.split(" ")?.drop(1)
@@ -56,6 +59,8 @@ class TimerService : ABotService() {
                             timerManager.timerData.lastRunLength.toFormattedString()
                         )
                     )
+                    lastReset?.burnConversation(MessageLifetime.FLASH)
+                    lastReset = conversation
                 }
                 TimerManager.OperationResult.RECORD_BROKEN -> {
                     conversation.replyMessage(
@@ -65,6 +70,8 @@ class TimerService : ABotService() {
                         )
                     )
                     conversation.sendMessage(JanaBot.messages.get("timer.recordBroken", oldRecord.toFormattedString()))
+                    lastReset?.burnConversation(MessageLifetime.FLASH)
+                    lastReset = conversation
                 }
                 TimerManager.OperationResult.SAVE_FAILED -> {
                     conversation.replyMessage(JanaBot.messages.get("db.saveFailed"))
@@ -76,7 +83,7 @@ class TimerService : ABotService() {
         private suspend fun getRecord(conversation: Conversation) {
             val record = timerManager.timerData.record
             conversation.replyMessage(JanaBot.messages.get("timer.recordInf", record.toFormattedString()))
-            conversation.burnConversation(MessageLifetime.MEDIUM)
+            conversation.burnConversation(MessageLifetime.SHORT)
         }
 
         private suspend fun getReport(conversation: Conversation) {
