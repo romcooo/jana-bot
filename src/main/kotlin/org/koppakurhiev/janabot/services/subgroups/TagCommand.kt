@@ -16,13 +16,13 @@ class TagCommand(private val subGroupsManager: SubGroupsManager) : ABotService.A
         if (words != null) {
             val text = tagMembers(subGroupsManager, message.chat.id, *words.toTypedArray())
             MessageCleaner.registerMessage(
-                conversation.sendMessage(
+                conversation.replyMessage(
                     text ?: JanaBot.messages.get("tag.noPeopleSelected", words.toString())
                 ), MessageLifetime.SHORT
             )
         } else {
             MessageCleaner.registerMessage(
-                conversation.sendMessage(JanaBot.messages.get("tag.invalidFormat")),
+                conversation.replyMessage(JanaBot.messages.get("tag.invalidFormat")),
                 MessageLifetime.SHORT
             )
         }

@@ -18,7 +18,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         val args = message.text?.split(" ")?.drop(1)
         logger.debug { "Executing command: $args" }
         if (args == null || args.isEmpty()) {
-            conversation.sendMessage(JanaBot.messages.get("group.noCommand"))
+            conversation.replyMessage(JanaBot.messages.get("group.noCommand"))
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
@@ -35,12 +35,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-listAll".toLowerCase() -> getAllSubGroups(conversation)
             "-rename" -> renameSubGroup(args, conversation, user)
             "-help" -> {
-                conversation.sendMessage(help())
+                conversation.replyMessage(help())
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
                 logger.debug { "Unknown argument used: ${args[0]}" }
-                conversation.sendMessage(text = JanaBot.messages.get("group.unknownCommand", args[0]))
+                conversation.replyMessage(text = JanaBot.messages.get("group.unknownCommand", args[0]))
                 conversation.burnConversation(MessageLifetime.FLASH)
             }
         }
@@ -55,7 +55,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.created", groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.LONG)
     }
 
@@ -70,7 +70,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.userAdded", username, groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.MEDIUM)
     }
 
@@ -92,7 +92,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.userAdded", usernameToAdd, groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.LONG)
     }
 
@@ -112,7 +112,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.userRemoved", usernameToRemove, groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.LONG)
     }
 
@@ -127,7 +127,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.userLeft", username, groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.MEDIUM)
     }
 
@@ -145,7 +145,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.renamed", oldGroupName, newGroupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.LONG)
     }
 
@@ -162,7 +162,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 standardReply(operationResult, JanaBot.messages.get("group.deleted", groupName))
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.LONG)
     }
 
@@ -179,7 +179,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 }
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
@@ -201,7 +201,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 }
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
@@ -227,7 +227,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
                 JanaBot.messages.get("group.chatGroups", subGroupsString.toString())
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
@@ -238,7 +238,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         } else {
             JanaBot.messages.get("group.noneExist")
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 

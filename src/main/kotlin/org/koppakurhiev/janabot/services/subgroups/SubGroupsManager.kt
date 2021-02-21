@@ -6,7 +6,7 @@ class SubGroupsManager : ALogged() {
 
     @Volatile
     private lateinit var groups: MutableList<SubGroup>
-    private val repository = SubGroupRepository("groups", "groups")
+    private val repository = SubGroupRepository()
 
     init {
         load()

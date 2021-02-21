@@ -22,8 +22,8 @@ abstract class ARepository<T>(private val directoryName: String, private val fil
         return "$dataFolderPath/$directoryName/$fileName.json"
     }
 
-    override fun save(data: List<T>, backup: Boolean): Boolean {
-        logger.info { "Saving to $directoryName" }
+    override fun save(data: T, backup: Boolean): Boolean {
+        logger.info { "Saving to $directoryName, backup = $backup" }
         return if (backup) {
             storeData(data, "${getBackupsPath()}${getNewBackupFileName()}")
         } else {
@@ -31,18 +31,14 @@ abstract class ARepository<T>(private val directoryName: String, private val fil
         }
     }
 
-    override fun load(sourceIndex: Int?): List<T>? {
+    override fun load(sourceIndex: Int?): T? {
         val filePath = getPathFromIndex(sourceIndex)
         return try {
             load(filePath)
         } catch (e: IOException) {
-            logger.warn { "Can't load, returning empty list: ${e.message}" }
-            emptyList()
+            logger.warn { "Couldn't load data from $filePath" }
+            return null
         }
-    }
-
-    protected inline fun <reified T> parse(path: String): List<T>? {
-        return Klaxon().parseArray(File(path))
     }
 
     override fun getAvailableBackups(): List<String> {
@@ -56,7 +52,7 @@ abstract class ARepository<T>(private val directoryName: String, private val fil
     }
 
     @Synchronized
-    private fun storeData(data: List<T>, filePath: String): Boolean {
+    private fun storeData(data: T, filePath: String): Boolean {
         val jsonData = Klaxon().toJsonString(data)
         logger.trace { "Writing to \"$filePath\" data: $jsonData" }
         return try {

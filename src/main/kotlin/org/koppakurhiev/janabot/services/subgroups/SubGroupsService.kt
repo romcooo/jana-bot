@@ -28,7 +28,7 @@ class SubGroupsService : ABotService() {
                 message.chat.id,
                 *taggedChannels.toTypedArray()
             )
-            if (text != null) conversation.sendMessage(text)
+            if (text != null) conversation.replyMessage(text)
         }
     }
 }

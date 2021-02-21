@@ -9,7 +9,7 @@ abstract class ABotService : ALogged(), IBotService {
         getCommands().forEach {
             if (it.help().isNotBlank()) {
                 helpBuilder.append("\n")
-                helpBuilder.append(it.help())
+                helpBuilder.appendLine(it.help())
             }
         }
         return helpBuilder.toString()

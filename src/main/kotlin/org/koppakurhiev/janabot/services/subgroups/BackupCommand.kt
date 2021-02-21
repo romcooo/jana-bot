@@ -13,7 +13,7 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
         val conversation = Conversation(message)
         val args = message.text?.split(" ")?.drop(1)
         if (args == null || args.isEmpty()) {
-            conversation.sendMessage(JanaBot.messages.get("backup.noCommand"))
+            conversation.replyMessage(JanaBot.messages.get("backup.noCommand"))
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
@@ -22,11 +22,11 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
             "-list" -> getAvailableBackups(conversation)
             "-load" -> loadSubGroups(args, conversation)
             "-help" -> {
-                conversation.sendMessage(help())
+                conversation.replyMessage(help())
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
-                conversation.sendMessage(JanaBot.messages.get("backup.unknownCommand", args[0]))
+                conversation.replyMessage(JanaBot.messages.get("backup.unknownCommand", args[0]))
                 conversation.burnConversation(MessageLifetime.FLASH)
             }
         }
@@ -39,7 +39,7 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
     private suspend fun loadSubGroups(args: List<String>, conversation: Conversation) {
         val index = args.getArg(1)?.toIntOrNull()
         if (index != null && index > subGroupsManager.getAvailableBackups().size) {
-            conversation.sendMessage(JanaBot.messages.get("backup.unknownIndex", index))
+            conversation.replyMessage(JanaBot.messages.get("backup.unknownIndex", index))
         }
         val operationResult = if (index == null || index < 1) {
             subGroupsManager.load()
@@ -55,7 +55,7 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
                 JanaBot.messages.get("db.loadSucceeded")
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
@@ -69,7 +69,7 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
                 JanaBot.messages.get("db.saveSucceeded")
             }
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
@@ -80,7 +80,7 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
         } else {
             JanaBot.messages.get("backup.active", backups.joinToString(separator = "\n"))
         }
-        conversation.sendMessage(text)
+        conversation.replyMessage(text)
         conversation.burnConversation(MessageLifetime.MEDIUM)
     }
 }
