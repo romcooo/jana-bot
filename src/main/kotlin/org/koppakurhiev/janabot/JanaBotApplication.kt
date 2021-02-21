@@ -5,6 +5,7 @@ import org.koppakurhiev.janabot.features.StringProvider
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
+import org.koppakurhiev.janabot.services.timer.TimerService
 import org.koppakurhiev.janabot.utils.ALogged
 import org.koppakurhiev.janabot.utils.BotBuilder
 import java.util.*
@@ -24,6 +25,7 @@ object JanaBot : ALogged() {
         val localServices = setOf(
             DefaultServices(),
             SubGroupsService(),
+            TimerService(),
         )
         services = localServices
     }

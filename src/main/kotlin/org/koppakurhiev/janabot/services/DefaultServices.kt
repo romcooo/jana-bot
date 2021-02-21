@@ -22,10 +22,10 @@ class DefaultServices : ABotService() {
             val messageBuilder = StringBuilder(JanaBot.messages.get("help.beginning"))
             JanaBot.services.forEach {
                 if (it.help().isNotBlank()) {
-                    messageBuilder.appendLine(it.help())
+                    messageBuilder.append(it.help())
                 }
             }
-            conversation.sendMessage(messageBuilder.toString())
+            conversation.replyMessage(messageBuilder.toString())
             conversation.burnConversation(MessageLifetime.SHORT)
             logger.debug { "/help command executed in channel " + message.chat.id }
         }
@@ -38,7 +38,7 @@ class DefaultServices : ABotService() {
     class Start : ABotService.ACommand("/start") {
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
-            conversation.sendMessage(JanaBot.messages.get("start.text", message.from?.first_name ?: "person"))
+            conversation.replyMessage(JanaBot.messages.get("start.text", message.from?.first_name ?: "person"))
             logger.debug { "/start command executed in channel " + message.chat.id }
         }
 

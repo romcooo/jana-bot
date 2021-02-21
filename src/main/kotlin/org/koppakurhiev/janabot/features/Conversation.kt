@@ -20,6 +20,15 @@ class Conversation(firstMessage: Message) {
 
     suspend fun sendMessage(text: String): Message {
         val message = JanaBot.bot.sendMessage(
+            chatId,
+            text
+        ).await()
+        messageList.add(message)
+        return message
+    }
+
+    suspend fun replyMessage(text: String): Message {
+        val message = JanaBot.bot.sendMessage(
             chatId = chatId,
             text = text,
             replyTo = messageList.last().message_id
