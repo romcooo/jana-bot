@@ -6,7 +6,7 @@ import java.io.File
 
 class TimerRepository : ARepository<TimerDTO>("timer", "timerData") {
     override fun load(filePath: String): TimerDTO? {
-        logger.info { "Getting timer data from: $filePath" }
+        logger.debug { "Getting timer data from: $filePath" }
         return Klaxon()
             .fieldConverter(KlaxonDuration::class, DurationConverter)
             .fieldConverter(KlaxonLocalDateTime::class, LocalDateTimeConverter)
