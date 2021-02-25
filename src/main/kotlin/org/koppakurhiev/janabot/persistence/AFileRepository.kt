@@ -8,11 +8,13 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
-abstract class ARepository<T>(private val directoryName: String, private val fileName: String) :
-    ALogged(), Repository<T> {
+abstract class AFileRepository<T>(private val directoryName: String, private val fileName: String) :
+    ALogged(), IRepository<T> {
     private val dataFolderPath = JanaBot.properties.getProperty("dataFolder")
     private val maxBackups = JanaBot.properties.getProperty("maxBackups").toInt()
     private val dateFormat = "yyyyMMdd-hhmmss"
+
+    abstract fun load(filePath: String): T?
 
     private fun getBackupsPath(): String {
         return "$dataFolderPath/$directoryName/backus/"

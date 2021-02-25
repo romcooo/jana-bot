@@ -40,4 +40,11 @@ class Conversation(firstMessage: Message) {
     fun burnConversation(timeToLive: MessageLifetime) {
         messageList.forEach { MessageCleaner.registerMessage(it, timeToLive) }
     }
+
+    companion object {
+        suspend fun startConversation(chatId: Long, text: String): Conversation {
+            val message = JanaBot.bot.sendMessage(chatId, text).await()
+            return Conversation(message)
+        }
+    }
 }

@@ -24,7 +24,7 @@ class TimerService : ABotService() {
 
     class TimerCommand(private val timerManager: TimerManager) : ABotService.ACommand("/timer") {
 
-        private var lastReset : Conversation? = null
+        private var lastReset: Conversation? = null
 
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
@@ -39,11 +39,11 @@ class TimerService : ABotService() {
                 "-reset" -> resetTimer(conversation)
                 "-record" -> getRecord(conversation)
                 "-help" -> {
-                    conversation.replyMessage(help())
+                    conversation.replyMessage(help(message))
                     conversation.burnConversation(MessageLifetime.SHORT)
                 }
                 else -> {
-                    conversation.replyMessage(JanaBot.messages.get("timer.unknownCommand", args.getArg(0)))
+                    conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(0)))
                     conversation.burnConversation(MessageLifetime.FLASH)
                 }
             }
@@ -95,7 +95,7 @@ class TimerService : ABotService() {
             conversation.burnConversation(MessageLifetime.SHORT)
         }
 
-        override fun help(): String {
+        override fun help(message: Message?): String {
             return JanaBot.messages.get("timer.help")
         }
     }

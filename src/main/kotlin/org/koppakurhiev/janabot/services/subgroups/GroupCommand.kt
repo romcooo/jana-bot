@@ -7,10 +7,13 @@ import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
+import org.koppakurhiev.janabot.services.patVpat.data.AnswersRepository
 import org.koppakurhiev.janabot.utils.getAdminId
 import org.koppakurhiev.janabot.utils.getArg
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
+
+    val answersRepository = AnswersRepository()
 
     override suspend fun onCommand(message: Message, s: String?) {
         val conversation = Conversation(message)
@@ -35,12 +38,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-listAll".toLowerCase() -> getAllSubGroups(conversation)
             "-rename" -> renameSubGroup(args, conversation, user)
             "-help" -> {
-                conversation.replyMessage(help())
+                conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
                 logger.debug { "Unknown argument used: ${args[0]}" }
-                conversation.replyMessage(text = JanaBot.messages.get("group.unknownCommand", args[0]))
+                conversation.replyMessage(text = JanaBot.messages.get("unknownCommand", args[0]))
                 conversation.burnConversation(MessageLifetime.FLASH)
             }
         }
@@ -242,7 +245,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
-    override fun help(): String {
+    override fun help(message: Message?): String {
         logger.trace { "SubGroup help called" }
         return JanaBot.messages.get("group.help")
     }
