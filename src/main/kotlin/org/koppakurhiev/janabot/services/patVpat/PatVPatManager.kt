@@ -59,7 +59,8 @@ class PatVPatManager {
         TODO()
     }
 
-    fun answer(text: String, chat: Chat): OperationResult {
+    fun addAnswer(text: String, chat: Chat): OperationResult {
+        //Always rewrite
         TODO()
     }
 

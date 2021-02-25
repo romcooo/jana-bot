@@ -31,6 +31,10 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 val usersName = "${message.from?.first_name} ${message.from?.last_name}"
                 addQuestion(questionText, usersName, conversation)
             }
+            "-addA".toLowerCase() -> {
+                val answerText = message.text?.replace("/5v5 -addA", "", true)?.trim()
+                addAnswer(answerText, message.chat, conversation)
+            }
             "-again" -> askAgain(message.chat, conversation)
             "-skip" -> skip(conversation)
             "-catchup" -> TODO()
@@ -40,13 +44,9 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
-                if (args.getArg(1)?.startsWith("-") == true) {
-                    conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(1)))
-                    conversation.burnConversation(MessageLifetime.FLASH)
-                    return
-                }
-                val questionText = message.text?.replace("/5v5 -addQ", "", true)?.trim()
-                answer(questionText, message.chat, conversation)
+                conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(1)))
+                conversation.burnConversation(MessageLifetime.FLASH)
+                return
             }
         }
     }
@@ -155,13 +155,13 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
     }
 
-    private suspend fun answer(text: String?, chat: Chat, conversation: Conversation) {
+    private suspend fun addAnswer(text: String?, chat: Chat, conversation: Conversation) {
         if (text == null || text.isBlank()) {
             conversation.replyMessage(JanaBot.messages.get("5v5.textNotFound"))
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
-        when (patVPatManager.answer(text, chat)) {
+        when (patVPatManager.addAnswer(text, chat)) {
             PatVPatManager.OperationResult.SUCCESS -> {
                 conversation.replyMessage(JanaBot.messages.get("5v5.answerRecorded"))
             }
