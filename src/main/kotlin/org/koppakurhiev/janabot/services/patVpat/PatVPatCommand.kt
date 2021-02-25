@@ -9,6 +9,7 @@ import org.koppakurhiev.janabot.services.ABotService
 import org.koppakurhiev.janabot.utils.getArg
 
 class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.ACommand("/5v5") {
+
     override suspend fun onCommand(message: Message, s: String?) {
         val conversation = Conversation(message)
         val args = message.text?.split(" ")?.drop(1)
@@ -37,8 +38,8 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
             }
             "-again" -> askAgain(message.chat, conversation)
             "-skip" -> skip(conversation)
-            "-catchup" -> TODO()
-            "-export" -> TODO()
+            "-catchup" -> catchUp(message.chat, conversation)
+            "-export" -> export(args, conversation)
             "-help" -> {
                 conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
@@ -52,68 +53,39 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
     }
 
     private suspend fun launchTheGame(conversation: Conversation) {
-        when (patVPatManager.launch()) {
-            PatVPatManager.OperationResult.SUCCESS -> conversation.replyMessage(JanaBot.messages.get("5v5.launch"))
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        val onSuccess = JanaBot.messages.get("5v5.launch")
+        standardReply(patVPatManager.launch(), onSuccess, conversation)
     }
 
     private suspend fun subscribe(chat: Chat, userName: String, conversation: Conversation) {
-        when (patVPatManager.subscribe(chat, userName)) {
-            PatVPatManager.OperationResult.SUCCESS -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.subscribed"))
-                if (patVPatManager.isQuestionAsked()) {
-                    askAgain(chat, conversation)
-                } else {
-                    conversation.replyMessage(JanaBot.messages.get("5v5.noQuestion"))
-                }
+        val onSuccess = JanaBot.messages.get("5v5.subscribed")
+        val result = patVPatManager.subscribe(chat, userName)
+        standardReply(result, onSuccess, conversation)
+        if (result == PatVPatManager.OperationResult.SUCCESS)
+            if (patVPatManager.isQuestionAsked()) {
+                askAgain(chat, conversation)
+            } else {
+                conversation.sendMessage(JanaBot.messages.get("5v5.noQuestion"))
             }
-            PatVPatManager.OperationResult.SAVE_FAILED -> {
-                conversation.replyMessage(JanaBot.messages.get("db.saveFailed"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
     }
 
     private suspend fun unsubscribe(chat: Chat, conversation: Conversation) {
-        when (patVPatManager.unsubscribe(chat)) {
-            PatVPatManager.OperationResult.SUCCESS -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.unsubscribed"))
-            }
-            PatVPatManager.OperationResult.SAVE_FAILED -> {
-                conversation.replyMessage(JanaBot.messages.get("db.saveFailed"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        val onSuccess = JanaBot.messages.get("5v5.unsubscribed")
+        standardReply(patVPatManager.unsubscribe(chat), onSuccess, conversation)
     }
 
     private suspend fun reminders(args: List<String>, chat: Chat, conversation: Conversation) {
         when (args.getArg(1)) {
-            "on" -> when (patVPatManager.remindersOn(chat)) {
-                PatVPatManager.OperationResult.SUCCESS -> conversation.replyMessage(JanaBot.messages.get("5v5.remindersOn"))
-                else -> {
-                    conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                    conversation.burnConversation(MessageLifetime.SHORT)
-                }
-            }
-            "off" -> when (patVPatManager.remindersOff(chat)) {
-                PatVPatManager.OperationResult.SUCCESS -> conversation.replyMessage(JanaBot.messages.get("5v5.remindersOff"))
-                else -> {
-                    conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                    conversation.burnConversation(MessageLifetime.SHORT)
-                }
-            }
+            "on" -> standardReply(
+                patVPatManager.remindersOn(chat),
+                JanaBot.messages.get("5v5.remindersOn"),
+                conversation
+            )
+            "off" -> standardReply(
+                patVPatManager.remindersOff(chat),
+                JanaBot.messages.get("5v5.remindersOff"),
+                conversation
+            )
             else -> {
                 conversation.replyMessage(JanaBot.messages.get("5v5.onOrOff"))
                 conversation.burnConversation(MessageLifetime.FLASH)
@@ -127,32 +99,14 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
-        when (patVPatManager.addQuestion(text, userName)) {
-            PatVPatManager.OperationResult.SUCCESS -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.newQuestion", text, 0))
-                conversation.burnConversation(MessageLifetime.MEDIUM)
-            }
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        val onSuccess = JanaBot.messages.get("5v5.newQuestion", text, patVPatManager.getQuestionPoolSize() + 1)
+        standardReply(patVPatManager.addQuestion(text, userName), onSuccess, conversation)
+        conversation.burnConversation(MessageLifetime.FLASH)
     }
 
     private suspend fun askAgain(chat: Chat, conversation: Conversation) {
-        when (patVPatManager.askUser(chat)) {
-            PatVPatManager.OperationResult.SUCCESS -> conversation.burnConversation(MessageLifetime.FLASH)
-            PatVPatManager.OperationResult.NOT_SUBSCRIBED -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.notSubscribed"))
-            }
-            PatVPatManager.OperationResult.FAILURE -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.noQuestion"))
-            }
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        standardReply(patVPatManager.askUser(chat.id), null, conversation)
+        conversation.burnConversation(MessageLifetime.FLASH)
     }
 
     private suspend fun addAnswer(text: String?, chat: Chat, conversation: Conversation) {
@@ -161,40 +115,52 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
-        when (patVPatManager.addAnswer(text, chat)) {
-            PatVPatManager.OperationResult.SUCCESS -> {
-                conversation.replyMessage(JanaBot.messages.get("5v5.answerRecorded"))
-            }
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        val onSuccess = JanaBot.messages.get("5v5.answerRecorded", text)
+        standardReply(patVPatManager.addAnswer(chat, text), onSuccess, conversation)
+        //TODO make the answer rewritable
     }
 
     private suspend fun skip(conversation: Conversation) {
-        when (patVPatManager.skipQuestion()) {
-            PatVPatManager.OperationResult.SUCCESS -> conversation.replyMessage(JanaBot.messages.get("5v5.skip"))
-            else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownError"))
-                conversation.burnConversation(MessageLifetime.SHORT)
-            }
-        }
+        val onSuccess = JanaBot.messages.get("5v5.skip")
+        standardReply(patVPatManager.skipQuestion(), onSuccess, conversation)
     }
 
-    private fun export() {
+    private fun export(args: List<String>, conversation: Conversation) {
         TODO()
     }
 
-    private fun catchUp() {
+    private fun catchUp(chat: Chat, conversation: Conversation) {
         TODO()
     }
 
     override fun help(message: Message?): String {
-        return if (message != null && patVPatManager.isSubscribed(message.chat)) {
+        return if (message != null && patVPatManager.isSubscribed(message.chat.id)) {
             JanaBot.messages.get("5v5.help.subscribed")
         } else {
             JanaBot.messages.get("5v5.help.notSubscribed")
         }
+    }
+
+    private suspend fun standardReply(
+        operationResult: PatVPatManager.OperationResult,
+        onSuccess: String?,
+        conversation: Conversation
+    ) {
+        val text = when (operationResult) {
+            PatVPatManager.OperationResult.ALREADY_SUBSCRIBED -> JanaBot.messages.get("5v5.alreadySubscribed")
+            PatVPatManager.OperationResult.NOT_SUBSCRIBED -> JanaBot.messages.get("5v5.notSubscribed")
+            PatVPatManager.OperationResult.NOT_VALID_CHAT -> JanaBot.messages.get("5v5.invalidChat")
+            PatVPatManager.OperationResult.NO_QUESTION_ASKED -> JanaBot.messages.get("5v5.noQuestion")
+            PatVPatManager.OperationResult.LOAD_FAILED -> JanaBot.messages.get("db.loadFailed")
+            PatVPatManager.OperationResult.SAVE_FAILED -> JanaBot.messages.get("db.saveFailed")
+            PatVPatManager.OperationResult.SUCCESS -> onSuccess
+            else -> {
+                logger.error { "Unspecified error occurred!!" }
+                JanaBot.messages.get("unknownError")
+            }
+        }
+        if (text.isNullOrEmpty()) return
+        conversation.replyMessage(text)
+        if (operationResult != PatVPatManager.OperationResult.SUCCESS) conversation.burnConversation(MessageLifetime.FLASH)
     }
 }

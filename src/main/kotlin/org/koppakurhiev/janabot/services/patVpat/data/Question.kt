@@ -4,7 +4,7 @@ data class Question(
     val id: Long,
     val text: String,
     val creator: String,
-    val skipped: Boolean = false,
-    val asked: Boolean = false,
-    val exported: Boolean = false
+    var skipped: Boolean = false,
+    var asked: Boolean = false,
+    var exported: Boolean = false
 )

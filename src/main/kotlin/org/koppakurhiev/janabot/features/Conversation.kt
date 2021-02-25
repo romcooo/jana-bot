@@ -7,6 +7,7 @@ import org.koppakurhiev.janabot.JanaBot
 class Conversation(firstMessage: Message) {
 
     private val messageList = ArrayList<Message>()
+    private var isBurned = false
     val chatId: Long
 
     init {
@@ -38,7 +39,10 @@ class Conversation(firstMessage: Message) {
     }
 
     fun burnConversation(timeToLive: MessageLifetime) {
-        messageList.forEach { MessageCleaner.registerMessage(it, timeToLive) }
+        if (!isBurned) {
+            messageList.forEach { MessageCleaner.registerMessage(it, timeToLive) }
+            isBurned = true
+        }
     }
 
     companion object {

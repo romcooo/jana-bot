@@ -7,13 +7,10 @@ import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
-import org.koppakurhiev.janabot.services.patVpat.data.AnswersRepository
 import org.koppakurhiev.janabot.utils.getAdminId
 import org.koppakurhiev.janabot.utils.getArg
 
 class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService.ACommand("/group") {
-
-    val answersRepository = AnswersRepository()
 
     override suspend fun onCommand(message: Message, s: String?) {
         val conversation = Conversation(message)
