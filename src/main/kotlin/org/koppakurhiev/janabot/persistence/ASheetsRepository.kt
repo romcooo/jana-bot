@@ -22,8 +22,8 @@ import java.io.InputStreamReader
 import java.security.GeneralSecurityException
 
 abstract class ASheetsRepository<T> : IRepository<T>, ALogged() {
-    private val tokensDirectory = JanaBot.properties.getProperty("sheetsTokenFolder")
-    private val credentialsPath = JanaBot.properties.getProperty("sheetsCredentials")
+    private val tokensDirectory = JanaBot.properties.getProperty("sheets.tokens")
+    private val credentialsPath = JanaBot.properties.getProperty("sheets.credentials")
     private val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
     private val scope = listOf(SheetsScopes.SPREADSHEETS)
 

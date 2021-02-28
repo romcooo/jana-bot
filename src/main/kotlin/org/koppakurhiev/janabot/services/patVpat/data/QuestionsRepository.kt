@@ -5,7 +5,7 @@ import org.koppakurhiev.janabot.persistence.ASheetsRepository
 import java.io.IOException
 import java.security.GeneralSecurityException
 
-class QuestionsRepository(val questionsPage: String) : ASheetsRepository<List<Question>>() {
+class QuestionsRepository(private val questionsPage: String) : ASheetsRepository<List<Question>>() {
 
 
     override fun save(data: List<Question>, backup: Boolean): Boolean {
@@ -57,6 +57,6 @@ class QuestionsRepository(val questionsPage: String) : ASheetsRepository<List<Qu
     }
 
     private fun getSheetId(): String {
-        return JanaBot.properties.getProperty("5v5QuestionSheet")
+        return JanaBot.properties.getProperty("sheets.5v5Sheet")
     }
 }

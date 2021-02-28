@@ -47,7 +47,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
-                conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(1)))
+                conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(0)))
                 conversation.burnConversation(MessageLifetime.FLASH)
                 return
             }
