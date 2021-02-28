@@ -1,5 +1,6 @@
 package org.koppakurhiev.janabot.services
 
+import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
@@ -18,6 +19,11 @@ class DefaultServices : ABotService() {
     }
 
     class Help : ACommand("/help") {
+
+        override fun getUiCommands(): List<BotCommand> {
+            return listOf(BotCommand("help", "Prints the help text with all information."))
+        }
+
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
             val messageBuilder = StringBuilder(JanaBot.messages.get("help.beginning"))
@@ -27,7 +33,7 @@ class DefaultServices : ABotService() {
                 }
             }
             conversation.replyMessage(messageBuilder.toString())
-            conversation.burnConversation(MessageLifetime.SHORT)
+            conversation.burnConversation(MessageLifetime.MEDIUM)
             logger.debug { "/help command executed in channel " + message.chat.id }
         }
 
@@ -37,6 +43,11 @@ class DefaultServices : ABotService() {
     }
 
     class Start : ABotService.ACommand("/start") {
+
+        override fun getUiCommands(): List<BotCommand> {
+            return listOf(BotCommand("start", "Gets the bot to talk to you."))
+        }
+
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
             conversation.replyMessage(JanaBot.messages.get("start.text", message.from?.first_name ?: "person"))
@@ -49,6 +60,11 @@ class DefaultServices : ABotService() {
     }
 
     class Invite : ABotService.ACommand("/invite") {
+
+        override fun getUiCommands(): List<BotCommand> {
+            return listOf(BotCommand("invite", "Gets you the link to the bots private chat."))
+        }
+
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)
             conversation.replyMessage(
@@ -57,6 +73,7 @@ class DefaultServices : ABotService() {
                     JanaBot.properties.getProperty("bot.username")
                 )
             )
+            conversation.burnConversation(MessageLifetime.MEDIUM)
         }
 
         override fun help(message: Message?): String {

@@ -1,5 +1,6 @@
 package org.koppakurhiev.janabot.services.timer
 
+import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
@@ -25,6 +26,10 @@ class TimerService : ABotService() {
     class TimerCommand(private val timerManager: TimerManager) : ABotService.ACommand("/timer") {
 
         private var lastReset: Conversation? = null
+
+        override fun getUiCommands(): List<BotCommand> {
+            return listOf(BotCommand("timer", "Resets THE timer"))
+        }
 
         override suspend fun onCommand(message: Message, s: String?) {
             val conversation = Conversation(message)

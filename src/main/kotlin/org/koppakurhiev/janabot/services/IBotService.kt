@@ -1,5 +1,6 @@
 package org.koppakurhiev.janabot.services
 
+import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.Message
 
 interface IBotService {
@@ -13,5 +14,8 @@ interface IBotService {
         val trigger: String
         suspend fun onCommand(message: Message, s: String?)
         fun help(message: Message?): String
+        fun getUiCommands() : List<BotCommand> {
+            return emptyList()
+        }
     }
 }
