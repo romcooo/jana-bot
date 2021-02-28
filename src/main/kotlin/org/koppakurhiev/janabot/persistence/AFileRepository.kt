@@ -27,7 +27,12 @@ abstract class AFileRepository<T>(private val directoryName: String, private val
     override fun save(data: T, backup: Boolean): Boolean {
         logger.info { "Saving to $directoryName, backup = $backup" }
         return if (backup) {
-            storeData(data, "${getBackupsPath()}${getNewBackupFileName()}")
+            if (storeData(data, "${getBackupsPath()}${getNewBackupFileName()}")) {
+                cleanBackups()
+                true
+            } else {
+                false
+            }
         } else {
             storeData(data, getDefaultSavePath())
         }
@@ -64,7 +69,6 @@ abstract class AFileRepository<T>(private val directoryName: String, private val
                 file.createNewFile()
             }
             file.writeText(jsonData)
-            cleanBackups()
             true
         } catch (e: IOException) {
             e.printStackTrace()

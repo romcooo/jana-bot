@@ -10,6 +10,7 @@ class DefaultServices : ABotService() {
     private val commands: Array<IBotService.ICommand> = arrayOf(
         Help(),
         Start(),
+        Invite(),
     )
 
     override fun getCommands(): Array<IBotService.ICommand> {
@@ -44,6 +45,22 @@ class DefaultServices : ABotService() {
 
         override fun help(message: Message?): String {
             return JanaBot.messages.get("start.help")
+        }
+    }
+
+    class Invite : ABotService.ACommand("/invite") {
+        override suspend fun onCommand(message: Message, s: String?) {
+            val conversation = Conversation(message)
+            conversation.replyMessage(
+                JanaBot.messages.get(
+                    "invite.text",
+                    JanaBot.properties.getProperty("bot.username")
+                )
+            )
+        }
+
+        override fun help(message: Message?): String {
+            return JanaBot.messages.get("invite.help")
         }
     }
 }

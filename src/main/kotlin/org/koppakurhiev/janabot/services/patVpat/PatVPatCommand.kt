@@ -18,7 +18,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
             conversation.burnConversation(MessageLifetime.FLASH)
             return
         }
-        logger.debug { "Executing command: $args" }
+        logger.trace { "Executing command: $args" }
         when (args[0].toLowerCase()) {
             "-launch" -> launchTheGame(conversation)
             "-subscribe" -> {
@@ -37,9 +37,11 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 addAnswer(answerText, message.chat, conversation)
             }
             "-again" -> askAgain(message.chat, conversation)
-            "-skip" -> skip(conversation)
+            "-qStatus".toLowerCase() -> printQuestionsStats(conversation)
+            "-skip" -> skip(message.chat, conversation)
             "-catchup" -> catchUp(message.chat, conversation)
             "-export" -> export(args, conversation)
+            "-rules" -> printRules(message.chat, conversation).burnConversation(MessageLifetime.MEDIUM)
             "-help" -> {
                 conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
@@ -52,6 +54,30 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
     }
 
+    private suspend fun printQuestionsStats(conversation: Conversation) {
+        val allQuestionCount = patVPatManager.getQuestionPoolSize()
+        val askedCount = patVPatManager.getAskedQuestionsCount()
+        val skippedCount = patVPatManager.getSkippedQuestionsCount()
+        conversation.replyMessage(
+            JanaBot.messages.get(
+                "5v5.questionsStats",
+                allQuestionCount,
+                askedCount,
+                skippedCount,
+                allQuestionCount - askedCount
+            )
+        )
+    }
+
+    private suspend fun printRules(chat: Chat, conversation: Conversation? = null): Conversation {
+        if (conversation == null) {
+            return Conversation.startConversation(chat.id, JanaBot.messages.get("5v5.rules"))
+        } else {
+            conversation.sendMessage(JanaBot.messages.get("5v5.rules"))
+        }
+        return conversation
+    }
+
     private suspend fun launchTheGame(conversation: Conversation) {
         val onSuccess = JanaBot.messages.get("5v5.launch")
         standardReply(patVPatManager.launch(), onSuccess, conversation)
@@ -61,12 +87,14 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         val onSuccess = JanaBot.messages.get("5v5.subscribed")
         val result = patVPatManager.subscribe(chat, userName)
         standardReply(result, onSuccess, conversation)
-        if (result == PatVPatManager.OperationResult.SUCCESS)
+        if (result == PatVPatManager.OperationResult.SUCCESS) {
+            printRules(chat, conversation)
             if (patVPatManager.isQuestionAsked()) {
                 askAgain(chat, conversation)
             } else {
                 conversation.sendMessage(JanaBot.messages.get("5v5.noQuestion"))
             }
+        }
     }
 
     private suspend fun unsubscribe(chat: Chat, conversation: Conversation) {
@@ -117,12 +145,10 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
         val onSuccess = JanaBot.messages.get("5v5.answerRecorded", text)
         standardReply(patVPatManager.addAnswer(chat, text), onSuccess, conversation)
-        //TODO make the answer rewritable
     }
 
-    private suspend fun skip(conversation: Conversation) {
-        val onSuccess = JanaBot.messages.get("5v5.skip")
-        standardReply(patVPatManager.skipQuestion(), onSuccess, conversation)
+    private suspend fun skip(chat: Chat, conversation: Conversation) {
+        standardReply(patVPatManager.skipQuestion(chat.id), null, conversation)
     }
 
     private fun export(args: List<String>, conversation: Conversation) {
