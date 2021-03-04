@@ -1,6 +1,7 @@
 package org.koppakurhiev.janabot
 
 import com.elbekD.bot.Bot
+import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.features.StringProvider
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
@@ -42,8 +43,15 @@ object JanaBot : ALogged() {
         buildServices()
         bot = BotBuilder(properties)
             .withServices(services)
+            .onMessage(this::onMessage)
             .build()
         bot.start()
         logger.info("${properties.getProperty("bot.username")} started.")
+    }
+
+    suspend fun onMessage(message: Message) {
+        services.forEach {
+            it.onMessage(message)
+        }
     }
 }

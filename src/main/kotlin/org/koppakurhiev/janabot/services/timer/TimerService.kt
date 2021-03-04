@@ -31,11 +31,11 @@ class TimerService : ABotService() {
             val args = message.text?.split(" ")?.drop(1)
             logger.debug { "Executing command: $args" }
             if (args == null || args.isEmpty()) {
-                getReport(conversation)
+                resetTimer(conversation)
                 return
             }
             when (args.getArg(0)) {
-                "-status" -> getReport(conversation)
+                "-info" -> getReport(conversation)
                 "-reset" -> resetTimer(conversation)
                 "-record" -> getRecord(conversation)
                 "-help" -> {

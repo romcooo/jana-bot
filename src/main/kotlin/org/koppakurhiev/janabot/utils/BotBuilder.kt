@@ -1,6 +1,7 @@
 package org.koppakurhiev.janabot.utils
 
 import com.elbekD.bot.Bot
+import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.services.IBotService
 import java.util.*
 
@@ -23,8 +24,12 @@ class BotBuilder(properties: Properties, constType: ConstructionType = Construct
     fun withServices(services: Set<IBotService>): BotBuilder {
         services.forEach {
             registerCommands(it.getCommands())
-            bot.onMessage(it::onMessage)
         }
+        return this
+    }
+
+    fun onMessage(action: suspend ((message: Message) -> Unit)): BotBuilder {
+        bot.onMessage(action)
         return this
     }
 
