@@ -130,7 +130,7 @@ class PatVPatManager : ALogged() {
         return if (isQuestionAsked()) {
             val message = JanaBot.messages.get(
                 "5v5.ask",
-                data.subscribers.size, data.runningQuestion!!.text
+                getSubscribersCount(), data.runningQuestion!!.text
             )
             Conversation.startConversation(chatId, message)
             OperationResult.SUCCESS
@@ -191,7 +191,7 @@ class PatVPatManager : ALogged() {
         logger.trace { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
-        if (isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
+        if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val questionId = data.runningQuestion!!.id
         val oldAnswer = data.answers.find { it.chatId == chat.id && it.questionId == questionId }
         if (oldAnswer != null) {
@@ -236,6 +236,10 @@ class PatVPatManager : ALogged() {
 
     fun getQuestionPoolSize(): Int {
         return data.questions?.size ?: 0
+    }
+
+    fun getSubscribersCount(): Int {
+        return data.subscribers.size
     }
 
     private fun generateNewQuestionId(): Long {

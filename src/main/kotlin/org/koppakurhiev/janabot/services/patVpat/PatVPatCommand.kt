@@ -37,7 +37,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 addAnswer(answerText, message.chat, conversation)
             }
             "-again" -> askAgain(message.chat, conversation)
-            "-qStatus".toLowerCase() -> printQuestionsStats(conversation)
+            "-status" -> printStats(conversation)
             "-skip" -> skip(message.chat, conversation)
             "-catchup" -> catchUp(message.chat, conversation)
             "-export" -> export(args, conversation)
@@ -54,17 +54,19 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
     }
 
-    private suspend fun printQuestionsStats(conversation: Conversation) {
+    private suspend fun printStats(conversation: Conversation) {
         val allQuestionCount = patVPatManager.getQuestionPoolSize()
         val askedCount = patVPatManager.getAskedQuestionsCount()
         val skippedCount = patVPatManager.getSkippedQuestionsCount()
+        val subscribers = patVPatManager.getSubscribersCount()
         conversation.replyMessage(
             JanaBot.messages.get(
                 "5v5.questionsStats",
                 allQuestionCount,
                 askedCount,
                 skippedCount,
-                allQuestionCount - askedCount
+                allQuestionCount - askedCount,
+                subscribers
             )
         )
     }
