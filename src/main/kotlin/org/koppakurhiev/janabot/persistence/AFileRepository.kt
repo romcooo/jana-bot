@@ -8,11 +8,13 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
-abstract class ARepository<T>(private val directoryName: String, private val fileName: String) :
-    ALogged(), Repository<T> {
+abstract class AFileRepository<T>(private val directoryName: String, private val fileName: String) :
+    ALogged(), IRepository<T> {
     private val dataFolderPath = JanaBot.properties.getProperty("dataFolder")
     private val maxBackups = JanaBot.properties.getProperty("maxBackups").toInt()
     private val dateFormat = "yyyyMMdd-hhmmss"
+
+    abstract fun load(filePath: String): T?
 
     private fun getBackupsPath(): String {
         return "$dataFolderPath/$directoryName/backus/"
@@ -25,7 +27,12 @@ abstract class ARepository<T>(private val directoryName: String, private val fil
     override fun save(data: T, backup: Boolean): Boolean {
         logger.info { "Saving to $directoryName, backup = $backup" }
         return if (backup) {
-            storeData(data, "${getBackupsPath()}${getNewBackupFileName()}")
+            if (storeData(data, "${getBackupsPath()}${getNewBackupFileName()}")) {
+                cleanBackups()
+                true
+            } else {
+                false
+            }
         } else {
             storeData(data, getDefaultSavePath())
         }
@@ -62,7 +69,6 @@ abstract class ARepository<T>(private val directoryName: String, private val fil
                 file.createNewFile()
             }
             file.writeText(jsonData)
-            cleanBackups()
             true
         } catch (e: IOException) {
             e.printStackTrace()

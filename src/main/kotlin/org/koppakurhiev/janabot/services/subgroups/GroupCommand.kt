@@ -35,12 +35,12 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
             "-listAll".toLowerCase() -> getAllSubGroups(conversation)
             "-rename" -> renameSubGroup(args, conversation, user)
             "-help" -> {
-                conversation.replyMessage(help())
+                conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
                 logger.debug { "Unknown argument used: ${args[0]}" }
-                conversation.replyMessage(text = JanaBot.messages.get("group.unknownCommand", args[0]))
+                conversation.replyMessage(text = JanaBot.messages.get("unknownCommand", args[0]))
                 conversation.burnConversation(MessageLifetime.FLASH)
             }
         }
@@ -242,7 +242,7 @@ class GroupCommand(private val subGroupsManager: SubGroupsManager) : ABotService
         conversation.burnConversation(MessageLifetime.SHORT)
     }
 
-    override fun help(): String {
+    override fun help(message: Message?): String {
         logger.trace { "SubGroup help called" }
         return JanaBot.messages.get("group.help")
     }

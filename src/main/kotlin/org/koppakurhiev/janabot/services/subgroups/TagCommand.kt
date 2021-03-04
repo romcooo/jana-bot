@@ -28,7 +28,7 @@ class TagCommand(private val subGroupsManager: SubGroupsManager) : ABotService.A
         }
     }
 
-    override fun help(): String {
+    override fun help(message: Message?): String {
         return JanaBot.messages.get("tag.help")
     }
 

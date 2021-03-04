@@ -22,17 +22,17 @@ class BackupCommand(private val subGroupsManager: SubGroupsManager) : ABotServic
             "-list" -> getAvailableBackups(conversation)
             "-load" -> loadSubGroups(args, conversation)
             "-help" -> {
-                conversation.replyMessage(help())
+                conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
-                conversation.replyMessage(JanaBot.messages.get("backup.unknownCommand", args[0]))
+                conversation.replyMessage(JanaBot.messages.get("unknownCommand", args[0]))
                 conversation.burnConversation(MessageLifetime.FLASH)
             }
         }
     }
 
-    override fun help(): String {
+    override fun help(message: Message?): String {
         return JanaBot.messages.get("backup.help")
     }
 

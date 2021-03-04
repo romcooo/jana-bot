@@ -4,6 +4,7 @@ import com.elbekD.bot.Bot
 import org.koppakurhiev.janabot.features.StringProvider
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
+import org.koppakurhiev.janabot.services.patVpat.PatVPatService
 import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
 import org.koppakurhiev.janabot.services.timer.TimerService
 import org.koppakurhiev.janabot.utils.ALogged
@@ -26,6 +27,7 @@ object JanaBot : ALogged() {
             DefaultServices(),
             SubGroupsService(),
             TimerService(),
+            PatVPatService(),
         )
         services = localServices
     }
@@ -35,12 +37,13 @@ object JanaBot : ALogged() {
         //IMPORTANT be careful with initialization order
         properties.load(configStream)
         configStream.close()
+        logger.info { "Building bot ${properties.getProperty("bot.username")}" }
         messages = StringProvider("en")
         buildServices()
         bot = BotBuilder(properties)
             .withServices(services)
             .build()
         bot.start()
-        logger.info("JanaBot started.")
+        logger.info("${properties.getProperty("bot.username")} started.")
     }
 }
