@@ -73,7 +73,6 @@ class DefaultServices : ABotService() {
                     JanaBot.properties.getProperty("bot.username")
                 )
             )
-            conversation.burnConversation(MessageLifetime.MEDIUM)
         }
 
         override fun help(message: Message?): String {

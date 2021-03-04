@@ -37,14 +37,14 @@ enum class MessageLifetime(val length: Long) {
     MEDIUM(600000L),
 
     /**
-     * 1 minute
+     * 2 minute
      */
-    SHORT(60000L),
+    SHORT(120000L),
 
     /**
-     * 10 seconds
+     * 30 seconds
      */
-    FLASH(10000L),
+    FLASH(30000L),
 
     /**
      * Default message lifetime, currently [FOREVER]

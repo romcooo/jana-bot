@@ -11,13 +11,12 @@ class TagCommand(private val subGroupsManager: SubGroupsManager) : ABotService.A
 
     override suspend fun onCommand(message: Message, s: String?) {
         val conversation = Conversation(message)
-        var words = message.text?.split(" ")
-        words = words?.subList(1, words.size)
-        if (words != null) {
-            val text = tagMembers(subGroupsManager, message.chat.id, *words.toTypedArray())
+        val args = message.text?.split(" ")?.drop(1)
+        if (args != null) {
+            val text = tagMembers(subGroupsManager, conversation.chatId, *args.toTypedArray())
             MessageCleaner.registerMessage(
                 conversation.replyMessage(
-                    text ?: JanaBot.messages.get("tag.noPeopleSelected", words.toString())
+                    text ?: JanaBot.messages.get("tag.noPeopleSelected", args.toString())
                 ), MessageLifetime.SHORT
             )
         } else {

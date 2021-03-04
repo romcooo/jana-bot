@@ -41,7 +41,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
             "-skip" -> skip(message.chat, conversation)
             "-catchup" -> catchUp(message.chat, conversation)
             "-export" -> export(args, conversation)
-            "-rules" -> printRules(message.chat, conversation).burnConversation(MessageLifetime.MEDIUM)
+            "-rules" -> printRules(message.chat, conversation)
             "-help" -> {
                 conversation.replyMessage(help(message))
                 conversation.burnConversation(MessageLifetime.SHORT)
@@ -129,7 +129,6 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
         val onSuccess = JanaBot.messages.get("5v5.newQuestion", text, patVPatManager.getQuestionPoolSize() + 1)
         standardReply(patVPatManager.addQuestion(text, userName), onSuccess, conversation)
-        conversation.burnConversation(MessageLifetime.FLASH)
     }
 
     private suspend fun askAgain(chat: Chat, conversation: Conversation) {
@@ -148,7 +147,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
     }
 
     private suspend fun skip(chat: Chat, conversation: Conversation) {
-        standardReply(patVPatManager.skipQuestion(chat.id), null, conversation)
+        standardReply(patVPatManager.skipQuestion(chat), null, conversation)
     }
 
     private fun export(args: List<String>, conversation: Conversation) {
@@ -187,6 +186,8 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
         if (text.isNullOrEmpty()) return
         conversation.replyMessage(text)
-        if (operationResult != PatVPatManager.OperationResult.SUCCESS) conversation.burnConversation(MessageLifetime.FLASH)
+        if (operationResult != PatVPatManager.OperationResult.SUCCESS) {
+            conversation.burnConversation(MessageLifetime.FLASH)
+        }
     }
 }

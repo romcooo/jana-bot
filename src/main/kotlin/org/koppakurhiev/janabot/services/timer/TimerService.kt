@@ -28,7 +28,7 @@ class TimerService : ABotService() {
         private var lastReset: Conversation? = null
 
         override fun getUiCommands(): List<BotCommand> {
-            return listOf(BotCommand("timer", "Resets THE timer"))
+            return listOf(BotCommand("timer -reset", "Resets THE timer"))
         }
 
         override suspend fun onCommand(message: Message, s: String?) {

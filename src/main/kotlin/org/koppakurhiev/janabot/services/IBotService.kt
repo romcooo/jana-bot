@@ -14,7 +14,7 @@ interface IBotService {
         val trigger: String
         suspend fun onCommand(message: Message, s: String?)
         fun help(message: Message?): String
-        fun getUiCommands() : List<BotCommand> {
+        fun getUiCommands(): List<BotCommand> {
             return emptyList()
         }
     }
