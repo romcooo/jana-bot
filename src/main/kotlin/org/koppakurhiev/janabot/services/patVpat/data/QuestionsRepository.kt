@@ -7,7 +7,6 @@ import java.security.GeneralSecurityException
 
 class QuestionsRepository(private val questionsPage: String) : ASheetsRepository<List<Question>>() {
 
-
     override fun save(data: List<Question>, backup: Boolean): Boolean {
         val values: MutableList<List<String>> = mutableListOf()
         data.forEach {

@@ -14,8 +14,8 @@ import kotlin.concurrent.schedule
 
 class PatVPatManager : ALogged() {
 
-    private val questionTTL = Duration.ofMinutes(10)
-    private val reminderTTL = Duration.ofMinutes(8)
+    private val questionTTL = Duration.ofDays(3)
+    private val reminderTTL = Duration.ofDays(2)
     private val dataRepository = PatVPatRepository()
     private val questionsRepository = QuestionsRepository("Questions01")
     private var data = PatVPatData()
@@ -130,7 +130,7 @@ class PatVPatManager : ALogged() {
         return if (isQuestionAsked()) {
             val message = JanaBot.messages.get(
                 "5v5.ask",
-                data.subscribers.size, data.runningQuestion!!.text
+                getSubscribersCount(), data.runningQuestion!!.text
             )
             Conversation.startConversation(chatId, message)
             OperationResult.SUCCESS
@@ -160,6 +160,7 @@ class PatVPatManager : ALogged() {
 
     fun unsubscribe(chat: Chat): OperationResult {
         logger.info { "${chat.first_name} ${chat.last_name} has unsubscribed from the game" }
+        if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         data.subscribers.removeIf { it.chatId == chat.id }
         return saveData()
@@ -183,12 +184,16 @@ class PatVPatManager : ALogged() {
         val newQuestion = Question(generateNewQuestionId(), text, creator)
         logger.debug { "Recording question $text from $creator" }
         data.questions?.add(newQuestion) ?: return OperationResult.FAILURE
+        val saveResult = saveData()
+        if (saveResult != OperationResult.SUCCESS) return saveResult
         return saveQuestions()
     }
 
     fun addAnswer(chat: Chat, text: String): OperationResult {
-        logger.trace { "Recording an answer from ${chat.username}" }
+        logger.trace { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
+        if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
+        if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val questionId = data.runningQuestion!!.id
         val oldAnswer = data.answers.find { it.chatId == chat.id && it.questionId == questionId }
         if (oldAnswer != null) {
@@ -200,8 +205,9 @@ class PatVPatManager : ALogged() {
         return saveData()
     }
 
-    suspend fun skipQuestion(chatId: Long): OperationResult {
-        if (!isSubscribed(chatId)) return OperationResult.NOT_SUBSCRIBED
+    suspend fun skipQuestion(chat: Chat): OperationResult {
+        if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
+        if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
         logger.info { "Skipping a question" }
         val skipped = data.runningQuestion!!
@@ -232,6 +238,10 @@ class PatVPatManager : ALogged() {
 
     fun getQuestionPoolSize(): Int {
         return data.questions?.size ?: 0
+    }
+
+    fun getSubscribersCount(): Int {
+        return data.subscribers.size
     }
 
     private fun generateNewQuestionId(): Long {

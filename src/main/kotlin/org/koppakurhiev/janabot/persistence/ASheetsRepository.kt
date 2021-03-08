@@ -79,7 +79,7 @@ abstract class ASheetsRepository<T> : IRepository<T>, ALogged() {
             service.spreadsheets().values().update(sheetsId, updateCoordinates, range)
         request.valueInputOption = "RAW"
         val response = request.execute()
-        logger.info { response }
+        logger.trace { response }
         return (response.updatedCells > 0)
     }
 }

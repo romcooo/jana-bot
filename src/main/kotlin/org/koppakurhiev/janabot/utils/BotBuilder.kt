@@ -1,11 +1,14 @@
 package org.koppakurhiev.janabot.utils
 
 import com.elbekD.bot.Bot
+import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.services.IBotService
 import java.util.*
 
 class BotBuilder(properties: Properties, constType: ConstructionType = ConstructionType.POLLING) {
+
+    val uiCommands: MutableList<BotCommand> = mutableListOf()
 
     private val bot: Bot = when (constType) {
         ConstructionType.POLLING -> Bot.createPolling(
@@ -18,6 +21,7 @@ class BotBuilder(properties: Properties, constType: ConstructionType = Construct
     private fun registerCommands(commands: Array<IBotService.ICommand>) {
         commands.forEach {
             bot.onCommand(it.trigger, it::onCommand)
+            uiCommands.addAll(it.getUiCommands())
         }
     }
 
@@ -34,6 +38,7 @@ class BotBuilder(properties: Properties, constType: ConstructionType = Construct
     }
 
     fun build(): Bot {
+        bot.setMyCommands(uiCommands)
         return bot
     }
 
