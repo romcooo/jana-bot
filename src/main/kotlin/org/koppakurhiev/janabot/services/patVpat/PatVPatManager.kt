@@ -184,6 +184,8 @@ class PatVPatManager : ALogged() {
         val newQuestion = Question(generateNewQuestionId(), text, creator)
         logger.debug { "Recording question $text from $creator" }
         data.questions?.add(newQuestion) ?: return OperationResult.FAILURE
+        val saveResult = saveData()
+        if (saveResult != OperationResult.SUCCESS) return saveResult
         return saveQuestions()
     }
 
