@@ -41,9 +41,7 @@ class PatVPatManager : ALogged() {
         if (oldQuestion != null && report) {
             logger.debug { "Printing report to subscribed users" }
             val answers = data.answers.filter { it.questionId == oldQuestion.id }
-            data.subscribers.forEach {
-                reportToUser(it.chatId, answers.size, oldQuestion.text)
-            }
+            broadcast(JanaBot.messages.get("5v5.fin", answers.size, oldQuestion.text))
         }
         data.runningQuestion = null
         val allQuestions = data.questions
@@ -54,9 +52,7 @@ class PatVPatManager : ALogged() {
         val unaskedQuestions = allQuestions.filter { !it.asked }
         if (unaskedQuestions.isEmpty()) {
             logger.info { "The game is out of questions" }
-            data.subscribers.forEach {
-                Conversation.startConversation(it.chatId, JanaBot.messages.get("5v5.outOfQuestions"))
-            }
+            broadcast(JanaBot.messages.get("5v5.outOfQuestions"))
             setNextQuestion(Duration.ofDays(1))
             data.reminderAt = null
         } else {
@@ -64,7 +60,8 @@ class PatVPatManager : ALogged() {
             logger.info { "Asking new question: ${newQuestion.text}" }
             newQuestion.asked = true
             data.runningQuestion = newQuestion
-            data.subscribers.forEach { askUser(it.chatId) }
+            val message = JanaBot.messages.get("5v5.ask", getSubscribersCount(), newQuestion.text)
+            broadcast(message)
             setNextQuestion(questionTTL)
             setReminder(reminderTTL)
         }
@@ -125,28 +122,28 @@ class PatVPatManager : ALogged() {
         }
     }
 
-    suspend fun askUser(chatId: Long): OperationResult {
-        if (!isSubscribed(chatId)) return OperationResult.NOT_SUBSCRIBED
+    suspend fun askUser(conversation: Conversation): OperationResult {
+        if (!isSubscribed(conversation.chatId)) return OperationResult.NOT_SUBSCRIBED
         return if (isQuestionAsked()) {
             val message = JanaBot.messages.get(
                 "5v5.ask",
                 getSubscribersCount(), data.runningQuestion!!.text
             )
-            Conversation.startConversation(chatId, message)
+            conversation.replyMessage(message)
             OperationResult.SUCCESS
         } else {
             OperationResult.NO_QUESTION_ASKED
         }
     }
 
-    private fun getAnswer(chatId: Long, questionId: Long): String? {
-        return data.answers.find { it.chatId == chatId && it.questionId == questionId }?.text
+    suspend fun broadcast(messageText: String) {
+        data.subscribers.forEach {
+            Conversation.startConversation(it.chatId, messageText)
+        }
     }
 
-    private suspend fun reportToUser(chatId: Long, numberOfAnswers: Int, question: String): OperationResult {
-        if (!isSubscribed(chatId)) return OperationResult.NOT_SUBSCRIBED
-        Conversation.startConversation(chatId, JanaBot.messages.get("5v5.fin", numberOfAnswers, question))
-        return OperationResult.SUCCESS
+    private fun getAnswer(chatId: Long, questionId: Long): String? {
+        return data.answers.find { it.chatId == chatId && it.questionId == questionId }?.text
     }
 
     fun subscribe(chat: Chat, username: String): OperationResult {
@@ -211,9 +208,7 @@ class PatVPatManager : ALogged() {
         if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
         logger.info { "Skipping a question" }
         val skipped = data.runningQuestion!!
-        data.subscribers.forEach {
-            Conversation.startConversation(it.chatId, JanaBot.messages.get("5v5.skipNotice", skipped.text))
-        }
+        broadcast(JanaBot.messages.get("5v5.skipNotice", skipped.text))
         skipped.skipped = true
         return changeQuestion(false)
     }

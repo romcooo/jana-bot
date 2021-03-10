@@ -49,9 +49,15 @@ object JanaBot : ALogged() {
         logger.info("${properties.getProperty("bot.username")} started.")
     }
 
-    suspend fun onMessage(message: Message) {
+    private suspend fun onMessage(message: Message) {
         services.forEach {
             it.onMessage(message)
         }
+    }
+
+    fun isAdmin(username: String?): Boolean {
+        if (username == null) return false
+        val admins = properties.getProperty("admins").split(", ");
+        return admins.contains(username)
     }
 }

@@ -20,7 +20,6 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         }
         logger.trace { "Executing command: $args" }
         when (args[0].toLowerCase()) {
-            "-launch" -> launchTheGame(conversation)
             "-subscribe" -> {
                 val usersName = "${message.from?.first_name} ${message.from?.last_name}"
                 subscribe(message.chat, usersName, conversation)
@@ -36,7 +35,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 val answerText = message.text?.replace("/5v5 -addA", "", true)?.trim()
                 addAnswer(answerText, message.chat, conversation)
             }
-            "-again" -> askAgain(message.chat, conversation)
+            "-again" -> askAgain(conversation)
             "-status" -> printStats(conversation)
             "-skip" -> skip(message.chat, conversation)
             "-catchup" -> catchUp(message.chat, conversation)
@@ -47,9 +46,27 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
                 conversation.burnConversation(MessageLifetime.SHORT)
             }
             else -> {
+                if (JanaBot.isAdmin(message.from?.username)) {
+                    adminCommands(args, conversation)
+                } else {
+                    conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(0)))
+                    conversation.burnConversation(MessageLifetime.FLASH)
+                }
+            }
+        }
+    }
+
+    private suspend fun adminCommands(args: List<String>, conversation: Conversation) {
+        when (args[0]) {
+            "-launch" -> launchTheGame(conversation)
+            "-stop" -> TODO()
+            "-broadcast" -> {
+                val message = args.drop(1).joinToString(" ")
+                if (message.isNotBlank()) patVPatManager.broadcast(message)
+            }
+            else -> {
                 conversation.replyMessage(JanaBot.messages.get("unknownCommand", args.getArg(0)))
                 conversation.burnConversation(MessageLifetime.FLASH)
-                return
             }
         }
     }
@@ -92,7 +109,7 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         if (result == PatVPatManager.OperationResult.SUCCESS) {
             printRules(chat, conversation)
             if (patVPatManager.isQuestionAsked()) {
-                askAgain(chat, conversation)
+                askAgain(conversation)
             } else {
                 conversation.sendMessage(JanaBot.messages.get("5v5.noQuestion"))
             }
@@ -133,8 +150,8 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
         standardReply(patVPatManager.addQuestion(text, userName), onSuccess, conversation)
     }
 
-    private suspend fun askAgain(chat: Chat, conversation: Conversation) {
-        standardReply(patVPatManager.askUser(chat.id), null, conversation)
+    private suspend fun askAgain(conversation: Conversation) {
+        standardReply(patVPatManager.askUser(conversation), null, conversation)
         conversation.burnConversation(MessageLifetime.FLASH)
     }
 
