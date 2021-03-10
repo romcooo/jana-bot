@@ -152,7 +152,6 @@ class PatVPatCommand(private val patVPatManager: PatVPatManager) : ABotService.A
 
     private suspend fun askAgain(conversation: Conversation) {
         standardReply(patVPatManager.askUser(conversation), null, conversation)
-        conversation.burnConversation(MessageLifetime.FLASH)
     }
 
     private suspend fun addAnswer(text: String?, chat: Chat, conversation: Conversation) {
