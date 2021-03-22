@@ -17,11 +17,18 @@ class PatVPatService : ABotService() {
     }
 
     override suspend fun onMessage(message: Message) {
+        //Needs refactor
+        val conversation = Conversation(message)
         val text = message.text
         val replyTo = message.reply_to_message
         if (replyTo == null || !isPatVPatMessage(replyTo)) return
+        val questionText = patVPatManager.getCurrentQuestion()
+        if (questionText != null && !replyTo.text!!.contains(questionText)) {
+            conversation.replyMessage(JanaBot.messages.get("5v5.invalidReply"))
+            return
+        }
         if (patVPatManager.isSubscribed(message.chat.id) && text != null && text.isNotBlank()) {
-            val conversation = Conversation(message)
+
             val onSuccess = JanaBot.messages.get("5v5.answerRecorded", text)
             when (patVPatManager.addAnswer(message.chat, text)) {
                 PatVPatManager.OperationResult.SUCCESS -> conversation.replyMessage(onSuccess)

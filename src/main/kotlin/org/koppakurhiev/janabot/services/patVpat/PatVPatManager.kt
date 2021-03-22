@@ -239,6 +239,10 @@ class PatVPatManager : ALogged() {
         return data.subscribers.size
     }
 
+    fun getCurrentQuestion(): String? {
+        return data.runningQuestion?.text;
+    }
+
     private fun generateNewQuestionId(): Long {
         return data.idCounter++
     }
