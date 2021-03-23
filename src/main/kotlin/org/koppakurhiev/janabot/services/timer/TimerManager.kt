@@ -1,12 +1,15 @@
 package org.koppakurhiev.janabot.services.timer
 
+import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.utils.ALogged
-import java.time.Duration
+import org.koppakurhiev.janabot.utils.Duration
+import org.litote.kmongo.getCollection
+import org.litote.kmongo.replaceOne
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 class TimerManager : ALogged() {
-    lateinit var timerData: TimerDTO
-    private val repository = TimerRepository()
+    lateinit var timerData: TimerData
 
     init {
         if (load() != OperationResult.SUCCESS) {
@@ -16,25 +19,34 @@ class TimerManager : ALogged() {
 
     private fun load(): OperationResult {
         logger.info { "Loading timer data" }
-        val data = repository.load()
+        val collection = MongoRepository.db.getCollection<TimerData>()
+        val data = collection.find().first()
         if (data == null) {
             logger.warn { "Data not found, initializing the timer" }
-            timerData = TimerDTO()
-            return save()
+            timerData = TimerData()
+            val result = collection.insertOne(timerData)
+            return if (!result.wasAcknowledged()) {
+                OperationResult.SAVE_FAILED
+            } else {
+                OperationResult.SUCCESS
+            }
+        } else {
+            timerData = data
+            return OperationResult.SUCCESS
         }
-        timerData = data
-        return OperationResult.SUCCESS
     }
 
     private fun save(): OperationResult {
-        return if (repository.save(timerData))
+        val collection = MongoRepository.db.getCollection<TimerData>()
+        val result = collection.replaceOne(timerData)
+        return if (result.wasAcknowledged())
             OperationResult.SUCCESS else OperationResult.SAVE_FAILED
     }
 
     fun resetTimer(): OperationResult {
         val now = LocalDateTime.now()
         val lastReset = timerData.timer
-        val lastRun = Duration.between(lastReset, now)
+        val lastRun = Duration.between(lastReset.toEpochSecond(ZoneOffset.UTC), now.toEpochSecond(ZoneOffset.UTC))
         timerData.timer = now
         timerData.lastRunLength = lastRun
         if (timerData.record < lastRun) {
