@@ -5,8 +5,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
+import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.services.patVpat.data.*
 import org.koppakurhiev.janabot.utils.ALogged
+import org.litote.kmongo.getCollection
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
@@ -20,6 +22,7 @@ class PatVPatManager : ALogged() {
     private val questionsRepository = QuestionsRepository("Questions01")
     private var data = PatVPatData()
     private val timer = Timer()
+    private var questions: MutableList<Question>? = null
 
     init {
         if (load() == OperationResult.LOAD_FAILED) {
@@ -44,7 +47,7 @@ class PatVPatManager : ALogged() {
             broadcast(JanaBot.messages.get("5v5.fin", answers.size, oldQuestion.text))
         }
         data.runningQuestion = null
-        val allQuestions = data.questions
+        val allQuestions = questions
         if (allQuestions == null) {
             logger.error { "No questions loaded from the DB" }
             return OperationResult.LOAD_FAILED
@@ -180,7 +183,7 @@ class PatVPatManager : ALogged() {
     fun addQuestion(text: String, creator: String): OperationResult {
         val newQuestion = Question(generateNewQuestionId(), text, creator)
         logger.debug { "Recording question $text from $creator" }
-        data.questions?.add(newQuestion) ?: return OperationResult.FAILURE
+        questions?.add(newQuestion) ?: return OperationResult.FAILURE
         val saveResult = saveData()
         if (saveResult != OperationResult.SUCCESS) return saveResult
         return saveQuestions()
@@ -222,17 +225,17 @@ class PatVPatManager : ALogged() {
     }
 
     fun getAskedQuestionsCount(): Int {
-        val allQuestions = data.questions ?: return 0
+        val allQuestions = questions ?: return 0
         return allQuestions.filter { it.asked }.size
     }
 
     fun getSkippedQuestionsCount(): Int {
-        val allQuestions = data.questions ?: return 0
+        val allQuestions = questions ?: return 0
         return allQuestions.filter { it.skipped }.size
     }
 
     fun getQuestionPoolSize(): Int {
-        return data.questions?.size ?: 0
+        return questions?.size ?: 0
     }
 
     fun getSubscribersCount(): Int {
@@ -249,7 +252,7 @@ class PatVPatManager : ALogged() {
 
     private fun load(): OperationResult {
         data = dataRepository.load() ?: return OperationResult.LOAD_FAILED
-        data.questions = questionsRepository.load()?.toMutableList() ?: return OperationResult.LOAD_FAILED
+        questions = questionsRepository.load()?.toMutableList() ?: return OperationResult.LOAD_FAILED
         if (data.reminderAt != null) {
             setReminder(Duration.between(LocalDateTime.now(), data.reminderAt))
         }
@@ -260,7 +263,7 @@ class PatVPatManager : ALogged() {
     }
 
     private fun saveQuestions(): OperationResult {
-        val questions = data.questions ?: return OperationResult.FAILURE
+        val questions = questions ?: return OperationResult.FAILURE
         return if (questionsRepository.save(questions))
             OperationResult.SUCCESS else OperationResult.SAVE_FAILED
     }

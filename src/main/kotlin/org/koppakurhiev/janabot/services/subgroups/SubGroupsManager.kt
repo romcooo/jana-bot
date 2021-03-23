@@ -1,45 +1,24 @@
 package org.koppakurhiev.janabot.services.subgroups
 
+import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.utils.ALogged
+import org.litote.kmongo.*
 
 class SubGroupsManager : ALogged() {
 
-    @Volatile
-    private lateinit var groups: MutableList<SubGroup>
-    private val repository = SubGroupRepository()
-
-    init {
-        load()
-    }
-
-    fun load(sourceIndex: Int? = null): OperationResult {
-        logger.debug { "Loading groups" }
-        val loadResult: List<SubGroup>? = repository.load(sourceIndex)
-        groups = loadResult?.toMutableList() ?: mutableListOf()
-        return if (loadResult == null) OperationResult.LOAD_FAILED else OperationResult.SUCCESS
-    }
-
-    fun save(backup: Boolean = false): OperationResult {
-        logger.debug { "Saving groups" }
-        return if (repository.save(groups, backup)) OperationResult.SUCCESS else OperationResult.SAVE_FAILED
-    }
-
-    fun getAvailableBackups(): List<String> {
-        return repository.getAvailableBackups()
-    }
+    private val collection = MongoRepository.db.getCollection<SubGroup>()
 
     fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): OperationResult {
         if (getSubGroup(chatId, groupName) != null) return OperationResult.GROUP_ALREADY_EXISTS
         logger.debug { "Creating group $groupName for channel $chatId" }
-        if (!groups.add(
-                SubGroup(
-                    name = groupName,
-                    chatId = chatId,
-                    admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
-                )
-            )
-        ) return OperationResult.UNKNOWN_ERROR
-        return save()
+        val newSubgroup = SubGroup(
+            name = groupName,
+            chatId = chatId,
+            admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
+        )
+        val insertResult = collection.insertOne(newSubgroup)
+        if (!insertResult.wasAcknowledged()) return OperationResult.SAVE_FAILED
+        return OperationResult.SUCCESS
     }
 
     fun addMember(groupName: String, chatId: Long, username: String): OperationResult {
@@ -47,36 +26,41 @@ class SubGroupsManager : ALogged() {
         if (currentGroup.members.contains(username)) return OperationResult.GROUP_CONTAINS_MEMBER
         logger.debug { "User $username added to the group $groupName" }
         if (!currentGroup.members.add(username)) return OperationResult.UNKNOWN_ERROR
-        return save()
+        return updateGroup(currentGroup)
+    }
+
+    private fun updateGroup(currentGroup: SubGroup): OperationResult {
+        val updateResult = collection.replaceOneById(currentGroup._id, currentGroup)
+        if (!updateResult.wasAcknowledged()) return OperationResult.SAVE_FAILED
+        return OperationResult.SUCCESS
     }
 
     fun removeMember(groupName: String, chatId: Long, username: String): OperationResult {
         val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
         logger.debug { "User $username removed from the group $groupName" }
         if (!currentGroup.members.remove(username)) return OperationResult.GROUP_MISSING_MEMBER
-        return save()
+        return updateGroup(currentGroup)
     }
 
-    fun getSubGroup(chatId: Long, groupName: String, ignoreCase: Boolean = true): SubGroup? {
+    fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
         logger.trace { "obtain SubGroup for: chatId=$chatId, group=$groupName" }
-        return groups.firstOrNull { g -> g.chatId == chatId && g.name.equals(groupName, ignoreCase = ignoreCase) }
+        return collection.findOne(SubGroup::chatId eq chatId, SubGroup::name eq groupName)
     }
 
     fun renameSubGroup(oldGroupName: String, newGroupName: String, chatId: Long): OperationResult {
         val currentGroup = getSubGroup(chatId, oldGroupName) ?: return OperationResult.GROUP_NOT_FOUND
-        if (groups.find { it.name.equals(oldGroupName, ignoreCase = true) } == null) {
+        if (getSubGroup(chatId, newGroupName) != null) {
             return OperationResult.GROUP_ALREADY_EXISTS
         }
         logger.debug { "Renaming group $oldGroupName to $newGroupName" }
         currentGroup.name = newGroupName
-        return save()
+        return updateGroup(currentGroup)
     }
 
     fun deleteSubGroup(groupName: String, chatId: Long): OperationResult {
-        val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
         logger.debug { "Group $groupName deleted" }
-        if (!groups.remove(currentGroup)) return OperationResult.UNKNOWN_ERROR
-        return save()
+        val result = collection.findOneAndDelete(and(SubGroup::chatId eq chatId, SubGroup::name eq groupName))
+        return if (result == null) OperationResult.GROUP_NOT_FOUND else OperationResult.SUCCESS
     }
 
     fun getMembersList(groupName: String, chatId: Long): List<String>? {
@@ -87,12 +71,12 @@ class SubGroupsManager : ALogged() {
 
     fun getChatSubGroups(chatId: Long): List<SubGroup> {
         logger.trace { "Getting SubGroups for chat $chatId" }
-        return groups.filter { g -> g.chatId == chatId }.toList()
+        return collection.find(SubGroup::chatId eq chatId).toList()
     }
 
     fun getAllGroups(): List<SubGroup> {
         logger.trace { "Getting all groups" }
-        return groups
+        return collection.find().toList()
     }
 
     fun getAdmins(chatId: Long, groupName: String): List<Int>? {
