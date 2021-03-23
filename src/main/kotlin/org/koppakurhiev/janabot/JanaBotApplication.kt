@@ -3,6 +3,7 @@ package org.koppakurhiev.janabot
 import com.elbekD.bot.Bot
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.features.StringProvider
+import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.services.DefaultServices
 import org.koppakurhiev.janabot.services.IBotService
 import org.koppakurhiev.janabot.services.patVpat.PatVPatService
@@ -22,6 +23,12 @@ object JanaBot : ALogged() {
     lateinit var services: Set<IBotService>
     val properties = Properties()
 
+    init {
+        val configStream = javaClass.getResourceAsStream("/config.properties")
+        properties.load(configStream)
+        configStream.close()
+    }
+
     //Add services here when implemented
     private fun buildServices() {
         val localServices = setOf(
@@ -34,11 +41,8 @@ object JanaBot : ALogged() {
     }
 
     fun launch() {
-        val configStream = javaClass.getResourceAsStream("/config.properties")
-        //IMPORTANT be careful with initialization order
-        properties.load(configStream)
-        configStream.close()
         logger.info { "Building bot ${properties.getProperty("bot.username")}" }
+        MongoRepository.initialize()
         messages = StringProvider("en")
         buildServices()
         bot = BotBuilder(properties)
@@ -57,7 +61,7 @@ object JanaBot : ALogged() {
 
     fun isAdmin(username: String?): Boolean {
         if (username == null) return false
-        val admins = properties.getProperty("admins").split(", ");
+        val admins = properties.getProperty("admins").split(", ")
         return admins.contains(username)
     }
 }
