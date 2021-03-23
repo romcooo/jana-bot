@@ -1,16 +1,15 @@
 package org.koppakurhiev.janabot.services.patVpat.data
 
-import org.koppakurhiev.janabot.persistence.KlaxonLocalDateTime
+
+import org.litote.kmongo.Id
+import org.litote.kmongo.newId
 import java.time.LocalDateTime
 
 data class PatVPatData @JvmOverloads constructor(
-    var idCounter: Long = 0,
+    val _id: Id<PatVPatData> = newId(),
     var runningQuestion: Question? = null,
     val subscribers: MutableList<Subscriber> = mutableListOf(),
-    val answers: MutableList<Answer> = mutableListOf(),
-    @KlaxonLocalDateTime
     var nextQuestionAt: LocalDateTime? = null,
-    @KlaxonLocalDateTime
     var reminderAt: LocalDateTime? = null
 )
 

@@ -1,7 +1,11 @@
 package org.koppakurhiev.janabot.services.patVpat.data
 
-data class Answer(
-    val questionId: Long,
+import org.litote.kmongo.Id
+import org.litote.kmongo.newId
+
+data class Answer @JvmOverloads constructor(
+    val _id: Id<Answer> = newId(),
+    var questionTag: Id<Question>? = null,
     val chatId: Long,
     var text: String
 )
