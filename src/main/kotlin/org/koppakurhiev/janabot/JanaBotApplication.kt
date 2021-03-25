@@ -1,63 +1,32 @@
 package org.koppakurhiev.janabot
 
-import com.elbekD.bot.Bot
-import com.elbekD.bot.types.Message
-import org.koppakurhiev.janabot.features.StringProvider
-import org.koppakurhiev.janabot.services.DefaultServices
-import org.koppakurhiev.janabot.services.IBotService
-import org.koppakurhiev.janabot.services.patVpat.PatVPatService
-import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
-import org.koppakurhiev.janabot.services.timer.TimerService
-import org.koppakurhiev.janabot.utils.ALogged
-import org.koppakurhiev.janabot.utils.BotBuilder
-import java.util.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import org.koppakurhiev.janabot.common.ALogged
+import org.koppakurhiev.janabot.telegram.bot.KoppaBot
 
-fun main() {
-    JanaBot.launch()
+object BotRunner : ALogged() {
+    private val bots: Set<IBot> = setOf(
+        KoppaBot(),
+    )
+
+    suspend fun launch() {
+        val jobs = mutableListOf<Job>()
+        bots.forEach {
+            jobs.add(GlobalScope.launch {
+                try {
+                    it.launch()
+                } catch (exception: Exception) {
+                    logger.error("The bot ${it.getName()} failed to start", exception)
+                }
+            })
+        }
+        jobs.joinAll()
+    }
 }
 
-object JanaBot : ALogged() {
-    lateinit var bot: Bot
-    lateinit var messages: StringProvider
-    lateinit var services: Set<IBotService>
-    val properties = Properties()
-
-    //Add services here when implemented
-    private fun buildServices() {
-        val localServices = setOf(
-            DefaultServices(),
-            SubGroupsService(),
-            TimerService(),
-            PatVPatService(),
-        )
-        services = localServices
-    }
-
-    fun launch() {
-        val configStream = javaClass.getResourceAsStream("/config.properties")
-        //IMPORTANT be careful with initialization order
-        properties.load(configStream)
-        configStream.close()
-        logger.info { "Building bot ${properties.getProperty("bot.username")}" }
-        messages = StringProvider("en")
-        buildServices()
-        bot = BotBuilder(properties)
-            .withServices(services)
-            .onMessage(this::onMessage)
-            .build()
-        bot.start()
-        logger.info("${properties.getProperty("bot.username")} started.")
-    }
-
-    private suspend fun onMessage(message: Message) {
-        services.forEach {
-            it.onMessage(message)
-        }
-    }
-
-    fun isAdmin(username: String?): Boolean {
-        if (username == null) return false
-        val admins = properties.getProperty("admins").split(", ");
-        return admins.contains(username)
-    }
+suspend fun main() {
+    BotRunner.launch()
 }

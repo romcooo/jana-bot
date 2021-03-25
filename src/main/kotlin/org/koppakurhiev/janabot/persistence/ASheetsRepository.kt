@@ -13,21 +13,47 @@ import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.ValueRange
-import org.koppakurhiev.janabot.JanaBot
-import org.koppakurhiev.janabot.utils.ALogged
+import org.koppakurhiev.janabot.IBot
+import org.koppakurhiev.janabot.common.ALogged
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
 import java.security.GeneralSecurityException
 
-abstract class ASheetsRepository<T> : IRepository<T>, ALogged() {
-    private val tokensDirectory = JanaBot.properties.getProperty("sheets.tokens")
-    private val credentialsPath = JanaBot.properties.getProperty("sheets.credentials")
+abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALogged() {
+    private val tokensDirectory = bot.getProperties().getProperty("sheets.tokens")
+    private val credentialsPath = bot.getProperties().getProperty("sheets.credentials")
     private val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
     private val scope = listOf(SheetsScopes.SPREADSHEETS)
 
     abstract fun parse(values: List<List<Any>>): T?
+
+    protected fun save(sheetsId: String, updateCoordinates: String, values: List<List<String>>): Boolean {
+        val service = buildSheetsService()
+        val range = ValueRange()
+        range.setValues(values)
+        val request: Sheets.Spreadsheets.Values.Update =
+            service.spreadsheets().values().update(sheetsId, updateCoordinates, range)
+        request.valueInputOption = "RAW"
+        val response = request.execute()
+        logger.trace { response }
+        return (response.updatedCells > 0)
+    }
+
+    @Throws(IOException::class, GeneralSecurityException::class)
+    protected fun load(sheetsId: String, sheetName: String): T? {
+        val service = buildSheetsService()
+        val response: ValueRange = service.spreadsheets().values()[sheetsId, sheetName]
+            .execute()
+        val values: List<List<Any>> = response.getValues()
+        return if (values.isEmpty()) {
+            logger.warn { "No data found." }
+            null
+        } else {
+            parse(values)
+        }
+    }
 
     /**
      * Creates an authorized Credential object.
@@ -49,37 +75,11 @@ abstract class ASheetsRepository<T> : IRepository<T>, ALogged() {
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("telegram_bot")
     }
 
-    @Throws(IOException::class, GeneralSecurityException::class)
-    protected fun load(sheetsId: String, sheetName: String): T? {
-        val service = buildSheetsService()
-        val response: ValueRange = service.spreadsheets().values()[sheetsId, sheetName]
-            .execute()
-        val values: List<List<Any>> = response.getValues()
-        return if (values.isEmpty()) {
-            logger.warn { "No data found." }
-            null
-        } else {
-            parse(values)
-        }
-    }
-
     private fun buildSheetsService(): Sheets {
         // Build a new authorized API client service.
         val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         return Sheets.Builder(httpTransport, jsonFactory, getCredentials(httpTransport))
-            .setApplicationName(JanaBot.properties.getProperty("bot.username"))
+            .setApplicationName(bot.getProperties().getProperty("bot.username"))
             .build()
-    }
-
-    protected fun save(sheetsId: String, updateCoordinates: String, values: List<List<String>>): Boolean {
-        val service = buildSheetsService()
-        val range = ValueRange()
-        range.setValues(values)
-        val request: Sheets.Spreadsheets.Values.Update =
-            service.spreadsheets().values().update(sheetsId, updateCoordinates, range)
-        request.valueInputOption = "RAW"
-        val response = request.execute()
-        logger.trace { response }
-        return (response.updatedCells > 0)
     }
 }
