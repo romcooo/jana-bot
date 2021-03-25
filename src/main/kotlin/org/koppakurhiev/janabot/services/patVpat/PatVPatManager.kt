@@ -5,8 +5,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.koppakurhiev.janabot.JanaBot
 import org.koppakurhiev.janabot.features.Conversation
-import org.koppakurhiev.janabot.services.patVpat.data.*
+import org.koppakurhiev.janabot.persistence.MongoRepository
+import org.koppakurhiev.janabot.services.patVpat.data.Answer
+import org.koppakurhiev.janabot.services.patVpat.data.PatVPatData
+import org.koppakurhiev.janabot.services.patVpat.data.Question
+import org.koppakurhiev.janabot.services.patVpat.data.Subscriber
 import org.koppakurhiev.janabot.utils.ALogged
+import org.litote.kmongo.*
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
@@ -16,14 +21,18 @@ class PatVPatManager : ALogged() {
 
     private val questionTTL = Duration.ofDays(3)
     private val reminderTTL = Duration.ofDays(2)
-    private val dataRepository = PatVPatRepository()
-    private val questionsRepository = QuestionsRepository("Questions01")
-    private var data = PatVPatData()
+    private val data: PatVPatData
     private val timer = Timer()
+    private val answersCollection = MongoRepository.db.getCollection<Answer>("5v5_answers")
+    private val questionsCollection = MongoRepository.db.getCollection<Question>("5v5_questions")
 
     init {
-        if (load() == OperationResult.LOAD_FAILED) {
-            logger.error { "5v5 game loading failed!!" }
+        val tmpData = MongoRepository.db.getCollection<PatVPatData>().findOne()
+        if (tmpData == null) {
+            data = PatVPatData()
+            MongoRepository.db.getCollection<PatVPatData>().insertOne(data)
+        } else {
+            data = tmpData
         }
     }
 
@@ -40,16 +49,11 @@ class PatVPatManager : ALogged() {
         val oldQuestion = data.runningQuestion
         if (oldQuestion != null && report) {
             logger.debug { "Printing report to subscribed users" }
-            val answers = data.answers.filter { it.questionId == oldQuestion.id }
-            broadcast(JanaBot.messages.get("5v5.fin", answers.size, oldQuestion.text))
+            val size = answersCollection.countDocuments(Answer::questionTag eq oldQuestion._id)
+            broadcast(JanaBot.messages.get("5v5.fin", size, oldQuestion.text))
         }
         data.runningQuestion = null
-        val allQuestions = data.questions
-        if (allQuestions == null) {
-            logger.error { "No questions loaded from the DB" }
-            return OperationResult.LOAD_FAILED
-        }
-        val unaskedQuestions = allQuestions.filter { !it.asked }
+        val unaskedQuestions = questionsCollection.find(Question::asked eq false).toList()
         if (unaskedQuestions.isEmpty()) {
             logger.info { "The game is out of questions" }
             broadcast(JanaBot.messages.get("5v5.outOfQuestions"))
@@ -59,15 +63,21 @@ class PatVPatManager : ALogged() {
             val newQuestion = unaskedQuestions.random()
             logger.info { "Asking new question: ${newQuestion.text}" }
             newQuestion.asked = true
+            if (!questionsCollection.updateOne(newQuestion).wasAcknowledged())
+                return OperationResult.SAVE_FAILED
             data.runningQuestion = newQuestion
             val message = JanaBot.messages.get("5v5.ask", getSubscribersCount(), newQuestion.text)
             broadcast(message)
             setNextQuestion(questionTTL)
             setReminder(reminderTTL)
         }
-        val result = saveQuestions()
-        if (result != OperationResult.SUCCESS) return OperationResult.SAVE_FAILED
-        return saveData()
+        return updateData()
+    }
+
+    private fun updateData(): OperationResult {
+        val collection = MongoRepository.db.getCollection<PatVPatData>()
+        val saveResponse = collection.replaceOne(data)
+        return if (saveResponse.wasAcknowledged()) OperationResult.SUCCESS else OperationResult.SAVE_FAILED
     }
 
     private fun setReminder(scheduleIn: Duration) {
@@ -76,7 +86,7 @@ class PatVPatManager : ALogged() {
         data.reminderAt = LocalDateTime.now().plus(scheduleIn)
         timer.schedule(scheduleIn.toMillis()) {
             GlobalScope.launch {
-                if (question.id == data.runningQuestion?.id) {
+                if (question._id == data.runningQuestion?._id) {
                     data.reminderAt = null
                     fireReminder()
                 } else {
@@ -100,7 +110,7 @@ class PatVPatManager : ALogged() {
             timer.schedule(scheduleIn.toMillis())
             {
                 GlobalScope.launch {
-                    if (question.id == data.runningQuestion?.id) {
+                    if (question._id == data.runningQuestion?._id) {
                         data.nextQuestionAt = null
                         changeQuestion(true)
                     } else {
@@ -115,7 +125,7 @@ class PatVPatManager : ALogged() {
 
     private suspend fun fireReminder() {
         val question = data.runningQuestion ?: return
-        val toRemind = data.subscribers.filter { it.reminders && getAnswer(it.chatId, question.id) == null }
+        val toRemind = data.subscribers.filter { it.reminders && getAnswer(it.chatId, question._id) == null }
         logger.info { "Reminding users of ${question.text}" }
         toRemind.forEach {
             Conversation.startConversation(it.chatId, JanaBot.messages.get("5v5.reminder", question.text))
@@ -142,8 +152,8 @@ class PatVPatManager : ALogged() {
         }
     }
 
-    private fun getAnswer(chatId: Long, questionId: Long): String? {
-        return data.answers.find { it.chatId == chatId && it.questionId == questionId }?.text
+    private fun getAnswer(chatId: Long, questionId: Id<Question>): String? {
+        return answersCollection.findOne(and(Answer::chatId eq chatId, Answer::questionTag eq questionId))?.text
     }
 
     fun subscribe(chat: Chat, username: String): OperationResult {
@@ -152,7 +162,7 @@ class PatVPatManager : ALogged() {
         if (isSubscribed(chat.id)) return OperationResult.ALREADY_SUBSCRIBED
         val newSubscriber = Subscriber(chat.id, username, true)
         data.subscribers.add(newSubscriber)
-        return saveData()
+        return updateData()
     }
 
     fun unsubscribe(chat: Chat): OperationResult {
@@ -160,30 +170,28 @@ class PatVPatManager : ALogged() {
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         data.subscribers.removeIf { it.chatId == chat.id }
-        return saveData()
+        return updateData()
     }
 
     fun remindersOn(chat: Chat): OperationResult {
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val subscriberData = data.subscribers.find { it.chatId == chat.id }
         subscriberData?.reminders = true
-        return saveData()
+        return updateData()
     }
 
     fun remindersOff(chat: Chat): OperationResult {
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val subscriberData = data.subscribers.find { it.chatId == chat.id }
         subscriberData?.reminders = false
-        return saveData()
+        return updateData()
     }
 
     fun addQuestion(text: String, creator: String): OperationResult {
-        val newQuestion = Question(generateNewQuestionId(), text, creator)
+        val newQuestion = Question(text = text, creator = creator)
         logger.debug { "Recording question $text from $creator" }
-        data.questions?.add(newQuestion) ?: return OperationResult.FAILURE
-        val saveResult = saveData()
-        if (saveResult != OperationResult.SUCCESS) return saveResult
-        return saveQuestions()
+        if (!questionsCollection.insertOne(newQuestion).wasAcknowledged()) return OperationResult.SAVE_FAILED
+        return OperationResult.SUCCESS
     }
 
     fun addAnswer(chat: Chat, text: String): OperationResult {
@@ -191,15 +199,16 @@ class PatVPatManager : ALogged() {
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
-        val questionId = data.runningQuestion!!.id
-        val oldAnswer = data.answers.find { it.chatId == chat.id && it.questionId == questionId }
-        if (oldAnswer != null) {
+        val questionId = data.runningQuestion!!._id
+        val oldAnswer = answersCollection.findOne(and(Answer::chatId eq chat.id, Answer::questionTag eq questionId))
+        val success = if (oldAnswer != null) {
             oldAnswer.text = text
+            answersCollection.updateOne(oldAnswer).wasAcknowledged()
         } else {
-            val newAnswer = Answer(questionId, chat.id, text)
-            data.answers.add(newAnswer)
+            val newAnswer = Answer(questionTag = questionId, chatId = chat.id, text = text)
+            answersCollection.insertOne(newAnswer).wasAcknowledged()
         }
-        return saveData()
+        return if (!success) OperationResult.SAVE_FAILED else OperationResult.SUCCESS
     }
 
     suspend fun skipQuestion(chat: Chat): OperationResult {
@@ -210,6 +219,7 @@ class PatVPatManager : ALogged() {
         val skipped = data.runningQuestion!!
         broadcast(JanaBot.messages.get("5v5.skipNotice", skipped.text))
         skipped.skipped = true
+        questionsCollection.updateOne(skipped)
         return changeQuestion(false)
     }
 
@@ -222,17 +232,15 @@ class PatVPatManager : ALogged() {
     }
 
     fun getAskedQuestionsCount(): Int {
-        val allQuestions = data.questions ?: return 0
-        return allQuestions.filter { it.asked }.size
+        return questionsCollection.countDocuments(Question::asked eq true).toInt()
     }
 
     fun getSkippedQuestionsCount(): Int {
-        val allQuestions = data.questions ?: return 0
-        return allQuestions.filter { it.skipped }.size
+        return questionsCollection.countDocuments(Question::skipped eq true).toInt()
     }
 
     fun getQuestionPoolSize(): Int {
-        return data.questions?.size ?: 0
+        return questionsCollection.countDocuments().toInt()
     }
 
     fun getSubscribersCount(): Int {
@@ -240,34 +248,7 @@ class PatVPatManager : ALogged() {
     }
 
     fun getCurrentQuestion(): String? {
-        return data.runningQuestion?.text;
-    }
-
-    private fun generateNewQuestionId(): Long {
-        return data.idCounter++
-    }
-
-    private fun load(): OperationResult {
-        data = dataRepository.load() ?: return OperationResult.LOAD_FAILED
-        data.questions = questionsRepository.load()?.toMutableList() ?: return OperationResult.LOAD_FAILED
-        if (data.reminderAt != null) {
-            setReminder(Duration.between(LocalDateTime.now(), data.reminderAt))
-        }
-        if (data.nextQuestionAt != null) {
-            setNextQuestion(Duration.between(LocalDateTime.now(), data.nextQuestionAt))
-        }
-        return OperationResult.SUCCESS
-    }
-
-    private fun saveQuestions(): OperationResult {
-        val questions = data.questions ?: return OperationResult.FAILURE
-        return if (questionsRepository.save(questions))
-            OperationResult.SUCCESS else OperationResult.SAVE_FAILED
-    }
-
-    private fun saveData(): OperationResult {
-        return if (dataRepository.save(data))
-            OperationResult.SUCCESS else OperationResult.SAVE_FAILED
+        return data.runningQuestion?.text
     }
 
     enum class OperationResult {

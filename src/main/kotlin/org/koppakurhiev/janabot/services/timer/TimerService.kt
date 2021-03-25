@@ -7,10 +7,10 @@ import org.koppakurhiev.janabot.features.Conversation
 import org.koppakurhiev.janabot.features.MessageLifetime
 import org.koppakurhiev.janabot.services.ABotService
 import org.koppakurhiev.janabot.services.IBotService
+import org.koppakurhiev.janabot.utils.Duration
 import org.koppakurhiev.janabot.utils.getArg
-import org.koppakurhiev.janabot.utils.toFormattedString
-import java.time.Duration
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 class TimerService : ABotService() {
@@ -95,7 +95,10 @@ class TimerService : ABotService() {
             val start = timerManager.timerData.timer
             val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
             val since = formatter.format(start)
-            val runningFor = Duration.between(start, LocalDateTime.now())
+            val runningFor = Duration.between(
+                start.toEpochSecond(ZoneOffset.UTC),
+                LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
+            )
             conversation.replyMessage(JanaBot.messages.get("timer.status", since, runningFor.toFormattedString()))
             conversation.burnConversation(MessageLifetime.SHORT)
         }

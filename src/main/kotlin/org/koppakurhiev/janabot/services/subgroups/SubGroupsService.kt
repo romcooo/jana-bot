@@ -13,7 +13,6 @@ class SubGroupsService : ABotService() {
         return arrayOf(
             TagCommand(subGroupsManager),
             GroupCommand(subGroupsManager),
-            BackupCommand(subGroupsManager),
         )
     }
 

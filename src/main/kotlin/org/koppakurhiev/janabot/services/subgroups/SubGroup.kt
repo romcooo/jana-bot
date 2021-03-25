@@ -1,6 +1,10 @@
 package org.koppakurhiev.janabot.services.subgroups
 
-class SubGroup(
+import org.litote.kmongo.Id
+import org.litote.kmongo.newId
+
+class SubGroup @JvmOverloads constructor(
+    val _id: Id<SubGroup> = newId(),
     var name: String,
     val chatId: Long,
     val admins: MutableList<Int> = mutableListOf(),

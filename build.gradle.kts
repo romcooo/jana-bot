@@ -1,10 +1,12 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm") version "1.4.21"
     application
 }
 
 group = "sk.koppakurhiev"
-version = "1.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -28,6 +30,13 @@ dependencies {
     implementation("com.beust:klaxon:5.0.1")
     // coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
+    //MongoDB
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation("org.litote.kmongo:kmongo:4.2.4")
+}
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "11"
 }
 
 application {
