@@ -34,25 +34,33 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         } else {
             data = tmpData
         }
+        if (data.reminderAt != null) {
+            setReminder(Duration.between(LocalDateTime.now(), data.reminderAt))
+        }
+        if (data.nextQuestionAt != null) {
+            setNextQuestion(Duration.between(LocalDateTime.now(), data.nextQuestionAt))
+        }
     }
 
     suspend fun launch(): OperationResult {
         logger.info { "Launching the 5v5 game!" }
-        if (data.runningQuestion == null) {
-            return changeQuestion(false)
+        return if (data.questionId != null) {
+            logger.info { "Swapping the active question" }
+            changeQuestion(true)
+        } else {
+            changeQuestion(false)
         }
-        return OperationResult.FAILURE
     }
 
     private suspend fun changeQuestion(report: Boolean): OperationResult {
         logger.trace { "Launching changeQuestion routine" }
-        val oldQuestion = data.runningQuestion
+        val oldQuestion = data.questionId?.let { questionsCollection.findOneById(it) }
         if (oldQuestion != null && report) {
             logger.debug { "Printing report to subscribed users" }
             val size = answersCollection.countDocuments(Answer::questionTag eq oldQuestion._id)
             broadcast(TelegramStrings.getString("5v5.fin", size, oldQuestion.text))
         }
-        data.runningQuestion = null
+        data.questionId = null
         val unaskedQuestions = questionsCollection.find(Question::asked eq false).toList()
         if (unaskedQuestions.isEmpty()) {
             logger.info { "The game is out of questions" }
@@ -65,7 +73,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
             newQuestion.asked = true
             if (!questionsCollection.updateOne(newQuestion).wasAcknowledged())
                 return OperationResult.SAVE_FAILED
-            data.runningQuestion = newQuestion
+            data.questionId = newQuestion._id
             val message = TelegramStrings.getString("5v5.ask", getSubscribersCount(), newQuestion.text)
             broadcast(message)
             setNextQuestion(questionTTL)
@@ -82,11 +90,11 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
 
     private fun setReminder(scheduleIn: Duration) {
         if (scheduleIn.isNegative) return
-        val question = data.runningQuestion ?: return
+        val question = data.questionId ?: return
         data.reminderAt = LocalDateTime.now().plus(scheduleIn)
         timer.schedule(scheduleIn.toMillis()) {
             GlobalScope.launch {
-                if (question._id == data.runningQuestion?._id) {
+                if (question == data.questionId) {
                     data.reminderAt = null
                     fireReminder()
                 } else {
@@ -99,7 +107,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
 
     private fun setNextQuestion(scheduleIn: Duration) {
         if (scheduleIn.isNegative) return
-        val question = data.runningQuestion
+        val question = data.questionId
         if (question == null) {
             timer.schedule(scheduleIn.toMillis()) {
                 GlobalScope.launch {
@@ -110,7 +118,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
             timer.schedule(scheduleIn.toMillis())
             {
                 GlobalScope.launch {
-                    if (question._id == data.runningQuestion?._id) {
+                    if (question == data.questionId) {
                         data.nextQuestionAt = null
                         changeQuestion(true)
                     } else {
@@ -124,18 +132,19 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     private suspend fun fireReminder() {
-        val question = data.runningQuestion ?: return
-        val toRemind = data.subscribers.filter { it.reminders && getAnswer(it.chatId, question._id) == null }
-        logger.info { "Reminding users of ${question.text}" }
+        val questionId = data.questionId ?: return
+        val toRemind = data.subscribers.filter { it.reminders && getAnswer(it.chatId, questionId) == null }
+        val text = getCurrentQuestion()
+        logger.info { "Reminding users of $text" }
         toRemind.forEach {
-            Conversation.startConversation(bot, it.chatId, TelegramStrings.getString("5v5.reminder", question.text))
+            Conversation.startConversation(bot, it.chatId, TelegramStrings.getString("5v5.reminder", text))
         }
     }
 
     suspend fun askUser(conversation: Conversation): OperationResult {
         if (!isSubscribed(conversation.chatId)) return OperationResult.NOT_SUBSCRIBED
         return if (isQuestionAsked()) {
-            val message = TelegramStrings.getString("5v5.ask", getSubscribersCount(), data.runningQuestion!!.text)
+            val message = TelegramStrings.getString("5v5.ask", getSubscribersCount(), getCurrentQuestion())
             conversation.replyMessage(message)
             OperationResult.SUCCESS
         } else {
@@ -144,6 +153,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     suspend fun broadcast(messageText: String) {
+        logger.trace { "Broadcasting message: $messageText" }
         data.subscribers.forEach {
             Conversation.startConversation(bot, it.chatId, messageText)
         }
@@ -192,17 +202,17 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     fun addAnswer(chat: Chat, text: String): OperationResult {
-        logger.trace { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
+        logger.debug { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
-        if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
+        if (data.questionId == null) return OperationResult.NO_QUESTION_ASKED
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
-        val questionId = data.runningQuestion!!._id
-        val oldAnswer = answersCollection.findOne(and(Answer::chatId eq chat.id, Answer::questionTag eq questionId))
+        val oldAnswer =
+            answersCollection.findOne(and(Answer::chatId eq chat.id, Answer::questionTag eq data.questionId))
         val success = if (oldAnswer != null) {
             oldAnswer.text = text
             answersCollection.updateOne(oldAnswer).wasAcknowledged()
         } else {
-            val newAnswer = Answer(questionTag = questionId, chatId = chat.id, text = text)
+            val newAnswer = Answer(questionTag = data.questionId, chatId = chat.id, text = text)
             answersCollection.insertOne(newAnswer).wasAcknowledged()
         }
         return if (!success) OperationResult.SAVE_FAILED else OperationResult.SUCCESS
@@ -211,9 +221,9 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     suspend fun skipQuestion(chat: Chat): OperationResult {
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
-        if (data.runningQuestion == null) return OperationResult.NO_QUESTION_ASKED
+        if (data.questionId == null) return OperationResult.NO_QUESTION_ASKED
         logger.info { "Skipping a question" }
-        val skipped = data.runningQuestion!!
+        val skipped = questionsCollection.findOneById(data.questionId!!) ?: return OperationResult.FAILURE
         broadcast(TelegramStrings.getString("5v5.skipNotice", skipped.text))
         skipped.skipped = true
         questionsCollection.updateOne(skipped)
@@ -225,7 +235,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     fun isQuestionAsked(): Boolean {
-        return data.runningQuestion != null
+        return data.questionId != null
     }
 
     fun getAskedQuestionsCount(): Int {
@@ -245,7 +255,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     fun getCurrentQuestion(): String? {
-        return data.runningQuestion?.text
+        return data.questionId?.let { questionsCollection.findOneById(it)?.text }
     }
 
     enum class OperationResult {

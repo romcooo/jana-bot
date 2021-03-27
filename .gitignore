@@ -151,7 +151,7 @@ gradle-app.setting
 
 # End of https://www.toptal.com/developers/gitignore/api/kotlin,jetbrains
 
-/src/main/resources/groups.json
 /src/main/resources/config.properties
 /data/
 /src/main/resources/sheets_credentials.json
+/src/main/resources/KoppaTelegram/config.properties

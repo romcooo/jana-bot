@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 
 data class PatVPatData @JvmOverloads constructor(
     val _id: Id<PatVPatData> = newId(),
-    var runningQuestion: Question? = null,
+    var questionId: Id<Question>? = null,
     val subscribers: MutableList<Subscriber> = mutableListOf(),
     var nextQuestionAt: LocalDateTime? = null,
     var reminderAt: LocalDateTime? = null
