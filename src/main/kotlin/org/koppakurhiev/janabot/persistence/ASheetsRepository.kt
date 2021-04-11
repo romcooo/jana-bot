@@ -22,8 +22,8 @@ import java.io.InputStreamReader
 import java.security.GeneralSecurityException
 
 abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALogged() {
-    private val tokensDirectory = bot.getProperties().getProperty("sheets.tokens")
-    private val credentialsPath = bot.getProperties().getProperty("sheets.credentials")
+    private val tokensDirectory = bot.properties.getProperty("sheets.tokens")
+    private val credentialsPath = bot.properties.getProperty("sheets.credentials")
     private val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
     private val scope = listOf(SheetsScopes.SPREADSHEETS)
 
@@ -79,7 +79,7 @@ abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALo
         // Build a new authorized API client service.
         val httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         return Sheets.Builder(httpTransport, jsonFactory, getCredentials(httpTransport))
-            .setApplicationName(bot.getProperties().getProperty("bot.username"))
+            .setApplicationName(bot.properties.getProperty("bot.username"))
             .build()
     }
 }

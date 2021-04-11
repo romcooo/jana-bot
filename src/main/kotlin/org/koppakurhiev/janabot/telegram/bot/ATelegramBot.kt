@@ -1,45 +1,31 @@
 package org.koppakurhiev.janabot.telegram.bot
 
 import com.elbekD.bot.Bot
+import com.elbekD.bot.types.CallbackQuery
 import com.elbekD.bot.types.Message
 import com.mongodb.client.MongoDatabase
 import org.koppakurhiev.janabot.common.ALogged
+import org.koppakurhiev.janabot.common.getArg
 import org.koppakurhiev.janabot.persistence.MongoRepository
+import org.koppakurhiev.janabot.telegram.TelegramStrings
 import java.util.*
 
-abstract class ATelegramBot(private val resourceFolder: String) : ALogged(), ITelegramBot {
-    private lateinit var bot: Bot
-
-    private val properties: Properties
-    private val repository: MongoRepository
+abstract class ATelegramBot(final override val resourceFolder: String) : ALogged(), ITelegramBot {
+    final override val properties: Properties
     override val services: MutableSet<IBotService> = mutableSetOf()
+    override lateinit var telegramBot: Bot
+
+    override val name: String get() = properties.getProperty("bot.username")
+    override val database: MongoDatabase get() = repository.database
+
+    private val repository: MongoRepository
 
     init {
         val configStream = javaClass.getResourceAsStream("/$resourceFolder/config.properties")
         properties = Properties()
         properties.load(configStream)
-        configStream.close()
+        configStream?.close()
         repository = MongoRepository(properties)
-    }
-
-    override fun getResourceFolder(): String {
-        return resourceFolder
-    }
-
-    override fun getName(): String {
-        return properties.getProperty("bot.username")
-    }
-
-    override fun getBot(): Bot {
-        return bot
-    }
-
-    override fun getDatabase(): MongoDatabase {
-        return repository.database
-    }
-
-    override fun getProperties(): Properties {
-        return properties
     }
 
     private suspend fun onMessage(message: Message) {
@@ -48,7 +34,8 @@ abstract class ATelegramBot(private val resourceFolder: String) : ALogged(), ITe
         }
     }
 
-    override fun isBotAdmin(username: String): Boolean {
+    override fun isBotAdmin(username: String?): Boolean {
+        if (username == null) return false
         val admins = properties.getProperty("admins").split(", ")
         return admins.contains(username)
     }
@@ -66,10 +53,32 @@ abstract class ATelegramBot(private val resourceFolder: String) : ALogged(), ITe
     }
 
     fun buildBot() {
-        bot = TelegramBotBuilder(getProperties())
+        telegramBot = TelegramBotBuilder(properties)
             .withServices(services)
             .onMessage(this::onMessage)
+            .onCallbackQuery(this::onCallbackQuery)
             .build()
-        bot.start()
+        telegramBot.start()
     }
+
+    override suspend fun onCallbackQuery(query: CallbackQuery, arguments: String?) {
+        var isResolved = false
+        if (arguments == null) {
+            onCallbackQueryWithNoData(query)
+        } else {
+            val command = arguments.split(" ")
+            services.forEach { service ->
+                service.commands.forEach {
+                    if (it.command == command.getArg(0)) {
+                        isResolved = it.onCallbackQuery(query, arguments.removePrefix(command[0]).trim())
+                    }
+                }
+            }
+            if (!isResolved) {
+                telegramBot.answerCallbackQuery(query.id, TelegramStrings.getString(key = "callback.unresolved"))
+            }
+        }
+    }
+
+    abstract fun onCallbackQueryWithNoData(query: CallbackQuery)
 }

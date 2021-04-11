@@ -7,8 +7,8 @@ class SubGroup @JvmOverloads constructor(
     val _id: Id<SubGroup> = newId(),
     var name: String,
     val chatId: Long,
-    val admins: MutableList<Int> = mutableListOf(),
-    val members: MutableList<String> = mutableListOf(),
+    val admins: MutableList<Long> = mutableListOf(),
+    val members: MutableList<Long> = mutableListOf(),
 ) {
 
     override fun toString(): String {

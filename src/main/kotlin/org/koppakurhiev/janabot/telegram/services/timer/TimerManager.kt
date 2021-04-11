@@ -19,25 +19,25 @@ class TimerManager(val bot: IBot) : ALogged() {
 
     private fun load(): OperationResult {
         logger.info { "Loading timer data" }
-        val collection = bot.getDatabase().getCollection<TimerData>()
+        val collection = bot.database.getCollection<TimerData>()
         val data = collection.find().first()
-        if (data == null) {
+        return if (data == null) {
             logger.warn { "Data not found, initializing the timer" }
             timerData = TimerData()
             val result = collection.insertOne(timerData)
-            return if (!result.wasAcknowledged()) {
+            if (!result.wasAcknowledged()) {
                 OperationResult.SAVE_FAILED
             } else {
                 OperationResult.SUCCESS
             }
         } else {
             timerData = data
-            return OperationResult.SUCCESS
+            OperationResult.SUCCESS
         }
     }
 
     private fun save(): OperationResult {
-        val collection = bot.getDatabase().getCollection<TimerData>()
+        val collection = bot.database.getCollection<TimerData>()
         val result = collection.replaceOne(timerData)
         return if (result.wasAcknowledged())
             OperationResult.SUCCESS else OperationResult.SAVE_FAILED

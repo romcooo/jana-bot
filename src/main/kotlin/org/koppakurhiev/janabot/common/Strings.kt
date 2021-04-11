@@ -1,13 +1,23 @@
 package org.koppakurhiev.janabot.common
 
+import com.elbekD.bot.types.Chat
+import org.koppakurhiev.janabot.telegram.bot.ChatData
+import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
+import org.litote.kmongo.eq
+import org.litote.kmongo.findOne
+import org.litote.kmongo.getCollection
 import java.util.*
 
 open class Strings(bundleAddress: String, locale: Locale) : ALogged() {
 
-    private val messages = Properties()
+    private val messages: Properties
 
     init {
-        val stringsStream = javaClass.getResourceAsStream(bundleAddress + locale.localeSuffix + ".properties")
+        val default = Properties()
+        var stringsStream = javaClass.getResourceAsStream(bundleAddress + Locale.DEFAULT.localeSuffix + ".properties")
+        default.load(stringsStream)
+        messages = Properties(default)
+        stringsStream = javaClass.getResourceAsStream(bundleAddress + locale.localeSuffix + ".properties")
         messages.load(stringsStream)
         logger.info { "${locale.name} locale loaded from $bundleAddress" }
     }
@@ -17,19 +27,24 @@ open class Strings(bundleAddress: String, locale: Locale) : ALogged() {
         return message.format(*args)
     }
 
-    enum class Locale(val localeSuffix: String) {
-        SK("_sk"),
-        EN("");
+    enum class Locale(val localeSuffix: String, val asString: String) {
+        SK("_sk", "sk"),
+        EN("", "en");
 
         companion object {
             val DEFAULT = EN
             fun getLocale(localeString: String): Locale {
                 return when (localeString) {
-                    "sk" -> SK
-                    "en" -> EN
+                    SK.asString -> SK
+                    EN.asString -> EN
                     else -> DEFAULT
                 }
             }
         }
     }
+}
+
+fun Chat.getLocale(bot: ITelegramBot): Strings.Locale {
+    val dataCollection = bot.database.getCollection<ChatData>()
+    return dataCollection.findOne(ChatData::chatId eq this.id)?.language ?: Strings.Locale.DEFAULT
 }

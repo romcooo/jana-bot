@@ -8,7 +8,7 @@ import java.io.IOException
 
 abstract class AFileRepository<T>(bot: IBot, private val directoryName: String, private val fileName: String) :
     ALogged(), IRepository<T> {
-    private val dataFolderPath = bot.getProperties().getProperty("dataFolder")
+    private val dataFolderPath = bot.properties.getProperty("dataFolder")
 
     abstract fun load(filePath: String): T?
 

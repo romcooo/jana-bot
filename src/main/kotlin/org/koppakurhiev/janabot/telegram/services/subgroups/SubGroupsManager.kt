@@ -1,31 +1,33 @@
 package org.koppakurhiev.janabot.telegram.services.subgroups
 
+import com.elbekD.bot.types.User
 import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
+import org.koppakurhiev.janabot.telegram.bot.getUsername
 import org.litote.kmongo.*
 
 class SubGroupsManager(val bot: ITelegramBot) : ALogged() {
 
-    private val collection = bot.getDatabase().getCollection<SubGroup>()
+    private val collection = bot.database.getCollection<SubGroup>()
 
-    fun createSubGroup(groupName: String, chatId: Long, fromId: Int?): OperationResult {
+    fun createSubGroup(groupName: String, chatId: Long, creatorId: Long): OperationResult {
         if (getSubGroup(chatId, groupName) != null) return OperationResult.GROUP_ALREADY_EXISTS
         logger.debug { "Creating group $groupName for channel $chatId" }
         val newSubgroup = SubGroup(
             name = groupName,
             chatId = chatId,
-            admins = if (fromId != null) mutableListOf(fromId) else mutableListOf()
+            admins = mutableListOf(creatorId)
         )
         val insertResult = collection.insertOne(newSubgroup)
         if (!insertResult.wasAcknowledged()) return OperationResult.SAVE_FAILED
         return OperationResult.SUCCESS
     }
 
-    fun addMember(groupName: String, chatId: Long, username: String): OperationResult {
+    fun addMember(groupName: String, chatId: Long, user: User): OperationResult {
         val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
-        if (currentGroup.members.contains(username)) return OperationResult.GROUP_CONTAINS_MEMBER
-        logger.debug { "User $username added to the group $groupName" }
-        if (!currentGroup.members.add(username)) return OperationResult.UNKNOWN_ERROR
+        if (currentGroup.members.contains(user.id.toLong())) return OperationResult.GROUP_CONTAINS_MEMBER
+        logger.debug { "User ${user.username} added to the group $groupName" }
+        if (!currentGroup.members.add(user.id.toLong())) return OperationResult.UNKNOWN_ERROR
         return updateGroup(currentGroup)
     }
 
@@ -35,14 +37,14 @@ class SubGroupsManager(val bot: ITelegramBot) : ALogged() {
         return OperationResult.SUCCESS
     }
 
-    fun removeMember(groupName: String, chatId: Long, username: String): OperationResult {
+    fun removeMember(groupName: String, chatId: Long, user: User): OperationResult {
         val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
-        logger.debug { "User $username removed from the group $groupName" }
-        if (!currentGroup.members.remove(username)) return OperationResult.GROUP_MISSING_MEMBER
+        logger.debug { "User ${user.username} removed from the group $groupName" }
+        if (!currentGroup.members.remove(user.id.toLong())) return OperationResult.GROUP_MISSING_MEMBER
         return updateGroup(currentGroup)
     }
 
-    fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
+    private fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
         logger.trace { "obtain SubGroup for: chatId=$chatId, group=$groupName" }
         return collection.findOne(SubGroup::chatId eq chatId, SubGroup::name eq groupName)
     }
@@ -63,10 +65,10 @@ class SubGroupsManager(val bot: ITelegramBot) : ALogged() {
         return if (result == null) OperationResult.GROUP_NOT_FOUND else OperationResult.SUCCESS
     }
 
-    fun getMembersList(groupName: String, chatId: Long): List<String>? {
+    suspend fun getMembersList(groupName: String, chatId: Long): List<String>? {
         val currentGroup = getSubGroup(chatId, groupName)
         logger.trace { "Obtained members for $groupName, $chatId" }
-        return currentGroup?.members
+        return currentGroup?.members?.mapNotNull { bot.telegramBot.getUsername(chatId, it) }
     }
 
     fun getChatSubGroups(chatId: Long): List<SubGroup> {
@@ -79,12 +81,32 @@ class SubGroupsManager(val bot: ITelegramBot) : ALogged() {
         return collection.find().toList()
     }
 
-    fun getAdmins(chatId: Long, groupName: String): List<Int>? {
-        val currentGroup = getSubGroup(chatId, groupName)
-        return currentGroup?.admins
+    fun addAdmin(chatId: Long, groupName: String, userId: Long): OperationResult {
+        return when (val currentGroup = getSubGroup(chatId, groupName)) {
+            null -> OperationResult.GROUP_NOT_FOUND
+            else -> {
+                currentGroup.admins.add(userId)
+                updateGroup(currentGroup)
+            }
+        }
     }
 
-    fun isGroupAdmin(chatId: Long, groupName: String, userId: Int): OperationResult {
+    fun removeAdmin(chatId: Long, groupName: String, userId: Long): OperationResult {
+        return when (val currentGroup = getSubGroup(chatId, groupName)) {
+            null -> OperationResult.GROUP_NOT_FOUND
+            else -> {
+                currentGroup.admins.remove(userId)
+                updateGroup(currentGroup)
+            }
+        }
+    }
+
+    suspend fun getAdmins(chatId: Long, groupName: String): List<String>? {
+        val currentGroup = getSubGroup(chatId, groupName)
+        return currentGroup?.admins?.mapNotNull { bot.telegramBot.getUsername(chatId, it) }
+    }
+
+    fun isGroupAdmin(chatId: Long, groupName: String, userId: Long): OperationResult {
         val currentGroup = getSubGroup(chatId, groupName) ?: return OperationResult.GROUP_NOT_FOUND
         if (currentGroup.admins.isEmpty()) return OperationResult.SUCCESS
         if (!currentGroup.admins.contains(userId)) return OperationResult.NOT_GROUP_ADMIN

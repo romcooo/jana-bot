@@ -5,18 +5,30 @@ import com.elbekD.bot.http.await
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.JobScheduler
+import org.litote.kmongo.eq
+import org.litote.kmongo.findOne
+import org.litote.kmongo.getCollection
 import java.util.*
-import kotlin.collections.ArrayList
 
-class Conversation(val bot: ITelegramBot, firstMessage: Message) : ALogged() {
+class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
 
     private val messageList = ArrayList<Message>()
     private var willBurn = false
-    val chatId: Long
+    val chatData: ChatData
+    val language get() = chatData.language
+
+    constructor(bot: ITelegramBot, firstMessage: Message) : this(bot, firstMessage.chat.id) {
+        messageList.add(firstMessage)
+    }
 
     init {
-        messageList.add(firstMessage)
-        chatId = firstMessage.chat.id
+        val chatDataCollection = bot.database.getCollection<ChatData>()
+        var data = chatDataCollection.findOne(ChatData::chatId eq chatId)
+        if (data == null) {
+            data = ChatData(chatId = chatId)
+            chatDataCollection.insertOne(data)
+        }
+        chatData = data
     }
 
     fun addMessage(message: Message) {
@@ -24,19 +36,21 @@ class Conversation(val bot: ITelegramBot, firstMessage: Message) : ALogged() {
     }
 
     suspend fun sendMessage(text: String): Message {
-        val message = bot.getBot().sendMessage(
+        val message = bot.telegramBot.sendMessage(
             chatId,
-            text
+            text,
+            parseMode = "markdown"
         ).await()
         messageList.add(message)
         return message
     }
 
     suspend fun replyMessage(text: String): Message {
-        val message = bot.getBot().sendMessage(
+        val message = bot.telegramBot.sendMessage(
             chatId = chatId,
             text = text,
-            replyTo = messageList.last().message_id
+            replyTo = messageList.last().message_id,
+            parseMode = "markdown"
         ).await()
         messageList.add(message)
         return message
@@ -49,7 +63,7 @@ class Conversation(val bot: ITelegramBot, firstMessage: Message) : ALogged() {
                 override fun run() {
                     messageList.forEach {
                         try {
-                            bot.getBot().deleteMessage(it.chat.id, it.message_id)
+                            bot.telegramBot.deleteMessage(it.chat.id, it.message_id)
                         } catch (error: TelegramApiError) {
                             logger.warn("Telegram could not delete a message", error)
                         }
@@ -66,7 +80,7 @@ class Conversation(val bot: ITelegramBot, firstMessage: Message) : ALogged() {
         JobScheduler.schedule(object : TimerTask() {
             override fun run() {
                 try {
-                    bot.getBot().deleteMessage(message.chat.id, message.message_id)
+                    bot.telegramBot.deleteMessage(message.chat.id, message.message_id)
                 } catch (error: TelegramApiError) {
                     logger.warn("Telegram could not delete a message", error)
                 }
@@ -76,7 +90,7 @@ class Conversation(val bot: ITelegramBot, firstMessage: Message) : ALogged() {
 
     companion object {
         suspend fun startConversation(bot: ITelegramBot, chatId: Long, text: String): Conversation {
-            val message = bot.getBot().sendMessage(chatId, text).await()
+            val message = bot.telegramBot.sendMessage(chatId, text).await()
             return Conversation(bot, message)
         }
     }

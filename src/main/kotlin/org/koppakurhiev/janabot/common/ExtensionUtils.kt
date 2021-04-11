@@ -6,3 +6,12 @@ package org.koppakurhiev.janabot.common
 fun List<String>.getArg(index: Int): String? {
     return if (this.size < index + 1) null else this[index]
 }
+
+/**
+ * Gets all elements after n-th joined by given separator as single string
+ */
+fun List<String>.after(index: Int, separator: CharSequence): String? {
+    if (this.size < index) return null
+    val theRest = this.drop(index + 1)
+    return theRest.joinToString(separator)
+}

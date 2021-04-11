@@ -1,10 +1,12 @@
 package org.koppakurhiev.janabot.telegram.services.patVpat
 
+import com.elbekD.bot.http.await
 import com.elbekD.bot.types.Chat
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.koppakurhiev.janabot.common.ALogged
-import org.koppakurhiev.janabot.telegram.TelegramStrings
+import org.koppakurhiev.janabot.common.JobScheduler
+import org.koppakurhiev.janabot.common.getLocale
 import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 import org.koppakurhiev.janabot.telegram.services.patVpat.data.Answer
@@ -14,23 +16,20 @@ import org.koppakurhiev.janabot.telegram.services.patVpat.data.Subscriber
 import org.litote.kmongo.*
 import java.time.Duration
 import java.time.LocalDateTime
-import java.util.*
-import kotlin.concurrent.schedule
 
 class PatVPatManager(val bot: ITelegramBot) : ALogged() {
 
     private val questionTTL = Duration.ofDays(3)
     private val reminderTTL = Duration.ofDays(2)
     private val data: PatVPatData
-    private val timer = Timer()
-    private val answersCollection = bot.getDatabase().getCollection<Answer>("5v5_answers")
-    private val questionsCollection = bot.getDatabase().getCollection<Question>("5v5_questions")
+    private val answersCollection = bot.database.getCollection<Answer>("5v5_answers")
+    private val questionsCollection = bot.database.getCollection<Question>("5v5_questions")
 
     init {
-        val tmpData = bot.getDatabase().getCollection<PatVPatData>().findOne()
+        val tmpData = bot.database.getCollection<PatVPatData>().findOne()
         if (tmpData == null) {
             data = PatVPatData()
-            bot.getDatabase().getCollection<PatVPatData>().insertOne(data)
+            bot.database.getCollection<PatVPatData>().insertOne(data)
         } else {
             data = tmpData
         }
@@ -58,13 +57,13 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (oldQuestion != null && report) {
             logger.debug { "Printing report to subscribed users" }
             val size = answersCollection.countDocuments(Answer::questionTag eq oldQuestion._id)
-            broadcast(TelegramStrings.getString("5v5.fin", size, oldQuestion.text))
+            broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "finish", size, oldQuestion.text) }
         }
         data.questionId = null
         val unaskedQuestions = questionsCollection.find(Question::asked eq false).toList()
         if (unaskedQuestions.isEmpty()) {
             logger.info { "The game is out of questions" }
-            broadcast(TelegramStrings.getString("5v5.outOfQuestions"))
+            broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "outOfQuestions") }
             setNextQuestion(Duration.ofDays(1))
             data.reminderAt = null
         } else {
@@ -74,8 +73,14 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
             if (!questionsCollection.updateOne(newQuestion).wasAcknowledged())
                 return OperationResult.SAVE_FAILED
             data.questionId = newQuestion._id
-            val message = TelegramStrings.getString("5v5.ask", getSubscribersCount(), newQuestion.text)
-            broadcast(message)
+            broadcast { chat ->
+                PatVPatStrings.getString(
+                    chat.getLocale(bot),
+                    "questionStatement",
+                    getSubscribersCount(),
+                    newQuestion.text
+                )
+            }
             setNextQuestion(questionTTL)
             setReminder(reminderTTL)
         }
@@ -83,7 +88,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     private fun updateData(): OperationResult {
-        val collection = bot.getDatabase().getCollection<PatVPatData>()
+        val collection = bot.database.getCollection<PatVPatData>()
         val saveResponse = collection.replaceOne(data)
         return if (saveResponse.wasAcknowledged()) OperationResult.SUCCESS else OperationResult.SAVE_FAILED
     }
@@ -92,7 +97,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (scheduleIn.isNegative) return
         val question = data.questionId ?: return
         data.reminderAt = LocalDateTime.now().plus(scheduleIn)
-        timer.schedule(scheduleIn.toMillis()) {
+        JobScheduler.schedule(scheduleIn.toMillis()) {
             GlobalScope.launch {
                 if (question == data.questionId) {
                     data.reminderAt = null
@@ -109,13 +114,13 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (scheduleIn.isNegative) return
         val question = data.questionId
         if (question == null) {
-            timer.schedule(scheduleIn.toMillis()) {
+            JobScheduler.schedule(scheduleIn.toMillis()) {
                 GlobalScope.launch {
                     changeQuestion(false)
                 }
             }
         } else {
-            timer.schedule(scheduleIn.toMillis())
+            JobScheduler.schedule(scheduleIn.toMillis())
             {
                 GlobalScope.launch {
                     if (question == data.questionId) {
@@ -137,14 +142,20 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         val text = getCurrentQuestion()
         logger.info { "Reminding users of $text" }
         toRemind.forEach {
-            Conversation.startConversation(bot, it.chatId, TelegramStrings.getString("5v5.reminder", text))
+            val conversation = Conversation(bot, it.chatId)
+            conversation.sendMessage(PatVPatStrings.getString(conversation.language, "reminder", text))
         }
     }
 
     suspend fun askUser(conversation: Conversation): OperationResult {
         if (!isSubscribed(conversation.chatId)) return OperationResult.NOT_SUBSCRIBED
         return if (isQuestionAsked()) {
-            val message = TelegramStrings.getString("5v5.ask", getSubscribersCount(), getCurrentQuestion())
+            val message = PatVPatStrings.getString(
+                conversation.language,
+                "questionStatement",
+                getSubscribersCount(),
+                getCurrentQuestion()
+            )
             conversation.replyMessage(message)
             OperationResult.SUCCESS
         } else {
@@ -152,10 +163,12 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         }
     }
 
-    suspend fun broadcast(messageText: String) {
-        logger.trace { "Broadcasting message: $messageText" }
+    suspend fun broadcast(buildMessage: (chat: Chat) -> String) {
+        logger.trace { "Broadcasting message" }
         data.subscribers.forEach {
-            Conversation.startConversation(bot, it.chatId, messageText)
+            val chat = bot.telegramBot.getChat(it.chatId).await()
+            val text = buildMessage.invoke(chat)
+            Conversation.startConversation(bot, chat.id, text)
         }
     }
 
@@ -218,13 +231,13 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         return if (!success) OperationResult.SAVE_FAILED else OperationResult.SUCCESS
     }
 
-    suspend fun skipQuestion(chat: Chat): OperationResult {
-        if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
-        if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
+    suspend fun skipQuestion(initChat: Chat): OperationResult {
+        if (initChat.type != "private") return OperationResult.NOT_VALID_CHAT
+        if (!isSubscribed(initChat.id)) return OperationResult.NOT_SUBSCRIBED
         if (data.questionId == null) return OperationResult.NO_QUESTION_ASKED
         logger.info { "Skipping a question" }
         val skipped = questionsCollection.findOneById(data.questionId!!) ?: return OperationResult.FAILURE
-        broadcast(TelegramStrings.getString("5v5.skipNotice", skipped.text))
+        broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "skipNotice", skipped.text) }
         skipped.skipped = true
         questionsCollection.updateOne(skipped)
         return changeQuestion(false)

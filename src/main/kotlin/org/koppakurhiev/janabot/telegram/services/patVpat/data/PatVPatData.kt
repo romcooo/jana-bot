@@ -1,6 +1,5 @@
 package org.koppakurhiev.janabot.telegram.services.patVpat.data
 
-
 import org.litote.kmongo.Id
 import org.litote.kmongo.newId
 import java.time.LocalDateTime
@@ -12,5 +11,3 @@ data class PatVPatData @JvmOverloads constructor(
     var nextQuestionAt: LocalDateTime? = null,
     var reminderAt: LocalDateTime? = null
 )
-
-

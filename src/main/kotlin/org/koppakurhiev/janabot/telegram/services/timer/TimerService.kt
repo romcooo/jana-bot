@@ -1,70 +1,59 @@
 package org.koppakurhiev.janabot.telegram.services.timer
 
 import com.elbekD.bot.types.BotCommand
+import com.elbekD.bot.types.CallbackQuery
+import com.elbekD.bot.types.Chat
 import com.elbekD.bot.types.Message
 import org.koppakurhiev.janabot.common.CommonStrings
 import org.koppakurhiev.janabot.common.Duration
-import org.koppakurhiev.janabot.common.getArg
+import org.koppakurhiev.janabot.common.getLocale
 import org.koppakurhiev.janabot.telegram.TelegramStrings
-import org.koppakurhiev.janabot.telegram.bot.Conversation
-import org.koppakurhiev.janabot.telegram.bot.IBotService
-import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
-import org.koppakurhiev.janabot.telegram.bot.MessageLifetime
-import org.koppakurhiev.janabot.telegram.services.ABotService
+import org.koppakurhiev.janabot.telegram.bot.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class TimerService(bot: ITelegramBot) : ABotService(bot) {
+class TimerService(override val bot: ITelegramBot) : IBotService {
 
     val timerManager = TimerManager(bot)
 
-    override fun getCommands(): Array<IBotService.IBotCommand> {
-        return arrayOf(
-            TimerCommand(this)
-        )
+    override val commands = arrayOf<IBotCommand>(
+        TimerCommand(this)
+    )
+
+    override suspend fun onMessage(message: Message) {
+        //Nothing
     }
 
-    class TimerCommand(service: TimerService) : ABotService.ABotCommand(service, "/timer") {
+    private class TimerCommand(override val service: TimerService) : ABotCommandWithSubCommands() {
+        override val command = "timer"
 
-        private val timerManager = service.timerManager
-        private var lastReset: Conversation? = null
+        override val subCommands = setOf(
+            Info(this),
+            Record(this),
+        )
 
-        override fun getUiCommands(): List<BotCommand> {
-            return listOf(BotCommand("timer -reset", "Resets THE timer"))
+        val manager get() = service.timerManager
+        var lastReset: Conversation? = null
+
+        override fun getUiCommand(): BotCommand {
+            return BotCommand(command, "Resets THE timer")
         }
 
-        override suspend fun onCommand(message: Message, s: String?) {
-            val conversation = Conversation(service.bot, message)
-            val args = message.text?.split(" ")?.drop(1)
-            logger.debug { "Executing command: $args" }
-            if (args == null || args.isEmpty()) {
-                resetTimer(conversation)
-                return
-            }
-            when (args.getArg(0)) {
-                "-info" -> getReport(conversation)
-                "-reset" -> resetTimer(conversation)
-                "-record" -> getRecord(conversation)
-                "-help" -> {
-                    conversation.replyMessage(help(message))
-                    conversation.burnConversation(MessageLifetime.SHORT)
-                }
-                else -> {
-                    conversation.replyMessage(CommonStrings.getString("unknownCommand", args.getArg(0)))
-                    conversation.burnConversation(MessageLifetime.FLASH)
-                }
-            }
+        override fun getArguments(): Array<String> {
+            return emptyArray()
         }
 
-        private suspend fun resetTimer(conversation: Conversation) {
-            val oldRecord = timerManager.timerData.record
-            when (timerManager.resetTimer()) {
+        override suspend fun onNoArguments(message: Message, argument: String?) {
+            val conversation = Conversation(bot, message)
+            val oldRecord = manager.timerData.record
+            when (manager.resetTimer()) {
                 TimerManager.OperationResult.SUCCESS -> {
                     conversation.replyMessage(
                         TelegramStrings.getString(
+                            conversation.language,
                             "timer.reset",
-                            timerManager.timerData.lastRunLength.toFormattedString()
+                            manager.timerData.lastRunLength.toFormattedString(conversation.language)
                         )
                     )
                     lastReset?.burnConversation(MessageLifetime.FLASH)
@@ -73,46 +62,91 @@ class TimerService(bot: ITelegramBot) : ABotService(bot) {
                 TimerManager.OperationResult.RECORD_BROKEN -> {
                     conversation.replyMessage(
                         TelegramStrings.getString(
+                            conversation.language,
                             "timer.reset",
-                            timerManager.timerData.lastRunLength.toFormattedString()
+                            manager.timerData.lastRunLength.toFormattedString(conversation.language)
                         )
                     )
                     conversation.sendMessage(
                         TelegramStrings.getString(
+                            conversation.language,
                             "timer.recordBroken",
-                            oldRecord.toFormattedString()
+                            oldRecord.toFormattedString(conversation.language)
                         )
                     )
                     lastReset?.burnConversation(MessageLifetime.FLASH)
                     lastReset = conversation
                 }
                 TimerManager.OperationResult.SAVE_FAILED -> {
-                    conversation.replyMessage(CommonStrings.getString("db.saveFailed"))
+                    conversation.replyMessage(CommonStrings.getString(conversation.language, "db.saveFailed"))
                     conversation.burnConversation(MessageLifetime.SHORT)
                 }
             }
         }
 
-        private suspend fun getRecord(conversation: Conversation) {
-            val record = timerManager.timerData.record
-            conversation.replyMessage(TelegramStrings.getString("timer.recordInf", record.toFormattedString()))
-            conversation.burnConversation(MessageLifetime.SHORT)
+        override fun plainHelp(chat: Chat): String {
+            return TelegramStrings.getString(chat.getLocale(bot), "timer.help")
         }
 
-        private suspend fun getReport(conversation: Conversation) {
-            val start = timerManager.timerData.timer
-            val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-            val since = formatter.format(start)
-            val runningFor = Duration.between(
-                start.toEpochSecond(ZoneOffset.UTC),
-                LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
-            )
-            conversation.replyMessage(TelegramStrings.getString("timer.status", since, runningFor.toFormattedString()))
-            conversation.burnConversation(MessageLifetime.SHORT)
+        override suspend fun onCallbackQuery(query: CallbackQuery, arguments: String): Boolean {
+            return false
         }
 
-        override fun help(message: Message?): String {
-            return TelegramStrings.getString("timer.help")
+        private class Info(override val parent: TimerCommand) : IBotSubCommand {
+            override val command = "info"
+
+            override fun getArguments(): Array<String> {
+                return emptyArray()
+            }
+
+            override suspend fun onCommand(message: Message, arguments: String?) {
+                val conversation = Conversation(bot, message)
+                val start = parent.manager.timerData.timer
+                val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                val since = formatter.format(start)
+                val runningFor = Duration.between(
+                    start.toEpochSecond(ZoneOffset.UTC),
+                    LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
+                )
+                conversation.replyMessage(
+                    TelegramStrings.getString(
+                        conversation.language,
+                        "timer.status",
+                        since,
+                        runningFor.toFormattedString(conversation.language)
+                    )
+                )
+                conversation.burnConversation(MessageLifetime.SHORT)
+            }
+
+            override fun help(chat: Chat): String {
+                return defaultHelp(TelegramStrings.getString(chat.getLocale(bot), "timer.info.help"))
+            }
+        }
+
+        private class Record(override val parent: TimerCommand) : IBotSubCommand {
+            override val command = "record"
+
+            override fun getArguments(): Array<String> {
+                return emptyArray()
+            }
+
+            override suspend fun onCommand(message: Message, arguments: String?) {
+                val conversation = Conversation(bot, message)
+                val record = parent.manager.timerData.record
+                conversation.replyMessage(
+                    TelegramStrings.getString(
+                        conversation.language,
+                        "timer.recordInf",
+                        record.toFormattedString(conversation.language)
+                    )
+                )
+                conversation.burnConversation(MessageLifetime.SHORT)
+            }
+
+            override fun help(chat: Chat): String {
+                return defaultHelp(TelegramStrings.getString(chat.getLocale(bot), "timer.record.help"))
+            }
         }
     }
 }
