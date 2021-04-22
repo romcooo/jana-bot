@@ -13,9 +13,12 @@ import java.util.*
 class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
 
     private val messageList = ArrayList<Message>()
-    private var willBurn = false
-    val chatData: ChatData
+    private val chatData: ChatData
+
     val language get() = chatData.language
+
+    private var isOnFire = false
+    var parseMode: ParseMode = ParseMode.DEFAULT
 
     constructor(bot: ITelegramBot, firstMessage: Message) : this(bot, firstMessage.chat.id) {
         messageList.add(firstMessage)
@@ -39,7 +42,7 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
         val message = bot.telegramBot.sendMessage(
             chatId,
             text,
-            parseMode = "markdown"
+            parseMode = parseMode.mode
         ).await()
         messageList.add(message)
         return message
@@ -50,14 +53,14 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
             chatId = chatId,
             text = text,
             replyTo = messageList.last().message_id,
-            parseMode = "markdown"
+            parseMode = parseMode.mode
         ).await()
         messageList.add(message)
         return message
     }
 
     fun burnConversation(timeToLive: MessageLifetime) {
-        if (!willBurn) {
+        if (!isOnFire) {
             logger.trace { "Scheduling conversation to be deleted: $this in ${timeToLive.length / 1000} seconds." }
             JobScheduler.schedule(object : TimerTask() {
                 override fun run() {
@@ -70,7 +73,7 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
                     }
                 }
             }, timeToLive.length)
-            willBurn = true
+            isOnFire = true
         }
 
     }
@@ -93,6 +96,12 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
             val message = bot.telegramBot.sendMessage(chatId, text).await()
             return Conversation(bot, message)
         }
+    }
+
+    enum class ParseMode(val mode: String?) {
+        MARKDOWN("Markdown"),
+        HTML("HTML"),
+        DEFAULT(null)
     }
 }
 

@@ -48,6 +48,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
                     messageBuilder.appendLine(line)
                 }
             }
+            conversation.parseMode = Conversation.ParseMode.MARKDOWN
             conversation.replyMessage(messageBuilder.toString())
             //TODO swap for close button
             conversation.burnConversation(MessageLifetime.MEDIUM)
