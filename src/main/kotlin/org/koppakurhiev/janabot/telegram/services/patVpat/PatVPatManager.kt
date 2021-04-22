@@ -19,8 +19,8 @@ import java.time.LocalDateTime
 
 class PatVPatManager(val bot: ITelegramBot) : ALogged() {
 
-    private val questionTTL = Duration.ofDays(3)
-    private val reminderTTL = Duration.ofDays(2)
+    private val questionTTL = Duration.ofDays(2)
+    private val reminderTTL = Duration.ofHours(37)
     private val data: PatVPatData
     private val answersCollection = bot.database.getCollection<Answer>("5v5_answers")
     private val questionsCollection = bot.database.getCollection<Question>("5v5_questions")
