@@ -65,7 +65,7 @@ abstract class ABotCommandWithSubCommands : IBotCommand {
             if (subCommand == "-help") {
                 val conversation = Conversation(bot, message)
                 conversation.parseMode = Conversation.ParseMode.MARKDOWN
-                conversation.replyMessage(help(message.chat))
+                conversation.replyMessage("/" + help(message.chat))
             } else {
                 subCommands.forEach {
                     if (subCommand == "-${it.command}") {

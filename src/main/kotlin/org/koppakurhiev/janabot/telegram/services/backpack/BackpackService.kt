@@ -28,7 +28,8 @@ class BackpackService(override val bot: ITelegramBot) : IBotService {
             GetSubCommand(this),
             RandomSubCommand(this),
             DeleteSubCommand(this),
-            RemoveSubCommand(this)
+            RemoveSubCommand(this),
+            Utop(this),
         )
 
         override fun getUiCommand(): BotCommand? {

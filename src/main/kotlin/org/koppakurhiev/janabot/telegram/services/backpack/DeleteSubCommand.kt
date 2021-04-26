@@ -7,7 +7,7 @@ import org.koppakurhiev.janabot.telegram.TelegramStrings
 import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.IBotSubCommand
 
-class DeleteSubCommand(override val parent: BackpackService.BackpackCommand) : IBotSubCommand {
+open class DeleteSubCommand(override val parent: BackpackService.BackpackCommand) : IBotSubCommand {
     override val command = "delete"
 
     val manager get() = parent.service.manager
@@ -40,4 +40,8 @@ class DeleteSubCommand(override val parent: BackpackService.BackpackCommand) : I
     override fun help(chat: Chat): String {
         return defaultHelp(BackpackStrings.getString(chat.getLocale(bot), "delete.help"))
     }
+}
+
+class Utop(parent: BackpackService.BackpackCommand) : DeleteSubCommand(parent) {
+    override val command = "hoditDoStudne"
 }
