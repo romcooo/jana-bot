@@ -4,13 +4,13 @@ import com.elbekD.bot.Bot
 import com.elbekD.bot.types.CallbackQuery
 import com.elbekD.bot.types.Message
 import com.mongodb.client.MongoDatabase
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.getArg
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.telegram.TelegramStrings
 import java.util.*
 
-abstract class ATelegramBot(final override val resourceFolder: String) : ALogged(), ITelegramBot {
+abstract class ATelegramBot(final override val resourceFolder: String) : ITelegramBot {
     final override val properties: Properties
     override val services: MutableSet<IBotService> = mutableSetOf()
     override lateinit var telegramBot: Bot
@@ -62,6 +62,7 @@ abstract class ATelegramBot(final override val resourceFolder: String) : ALogged
     }
 
     override suspend fun onCallbackQuery(query: CallbackQuery, arguments: String?) {
+        getLogger().trace { "Callback with arguments '$arguments' \n $query" }
         var isResolved = false
         if (arguments == null) {
             onCallbackQueryWithNoData(query)

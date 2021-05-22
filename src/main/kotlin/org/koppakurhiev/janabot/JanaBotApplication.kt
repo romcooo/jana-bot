@@ -4,12 +4,12 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.getArg
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.persistence.MongoRepository
 import org.koppakurhiev.janabot.telegram.bot.KoppaBot
 
-object BotRunner : ALogged() {
+object BotRunner {
     val bots: Set<IBot> = setOf(
         KoppaBot(),
     )
@@ -21,7 +21,7 @@ object BotRunner : ALogged() {
                 try {
                     it.launch()
                 } catch (exception: Exception) {
-                    logger.error("The bot ${it.name} failed to start", exception)
+                    getLogger().error("The bot ${it.name} failed to start", exception)
                 }
             })
         }
@@ -34,8 +34,8 @@ suspend fun main() {
     CommandLineInterface.launch()
 }
 
-private object CommandLineInterface : ALogged() {
-
+private object CommandLineInterface {
+    val logger = getLogger()
     var mainJob: Job? = null
 
     fun launch() {
@@ -67,7 +67,11 @@ private object CommandLineInterface : ALogged() {
                 it.stop()
             })
         }
+        jobs.add(
+            GlobalScope.launch {
+                MongoRepository.close()
+            }
+        )
         jobs.joinAll()
-        MongoRepository.close()
     }
 }

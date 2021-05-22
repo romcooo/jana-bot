@@ -1,14 +1,15 @@
 package org.koppakurhiev.janabot.telegram.services.timer
 
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.Duration
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 import org.litote.kmongo.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.random.Random
 
-class TimerManager(val bot: ITelegramBot) : ALogged() {
+class TimerManager(val bot: ITelegramBot) {
+    private val logger = getLogger()
 
     private fun save(data: TimerData): OperationResult {
         val collection = bot.database.getCollection<TimerData>()
@@ -35,6 +36,7 @@ class TimerManager(val bot: ITelegramBot) : ALogged() {
     fun addReaction(type: TimerReaction.Type, text: String): OperationResult {
         val collection = bot.database.getCollection<TimerReaction>()
         val reaction = TimerReaction(type = type, text = text)
+        logger.info { "Adding timer reaction '$text'" }
         return if (collection.insertOne(reaction).wasAcknowledged()) {
             OperationResult.SUCCESS
         } else {
@@ -60,6 +62,7 @@ class TimerManager(val bot: ITelegramBot) : ALogged() {
         timerData.timer = now
         timerData.lastRunLength = lastRun
         val oldRecord = timerData.record
+        logger.info { "$chatId - Timer reset after $lastRun sec." }
         if (oldRecord != null && oldRecord < lastRun) {
             timerData.record = lastRun
             return if (save(timerData) == OperationResult.SUCCESS)

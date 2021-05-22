@@ -4,9 +4,9 @@ import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.CallbackQuery
 import com.elbekD.bot.types.Chat
 import com.elbekD.bot.types.Message
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.CommonStrings
 import org.koppakurhiev.janabot.common.Strings
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.TelegramStrings
 import org.koppakurhiev.janabot.telegram.bot.ABotCommandWithSubCommands
 import org.koppakurhiev.janabot.telegram.bot.Conversation
@@ -55,7 +55,7 @@ class PatVPatCommand(override val service: PatVPatService) : ABotCommandWithSubC
         return null
     }
 
-    abstract class APatVPatSubCommand(override val parent: PatVPatCommand) : IBotSubCommand, ALogged() {
+    abstract class APatVPatSubCommand(override val parent: PatVPatCommand) : IBotSubCommand {
         val manager get() = parent.service.patVPatManager
 
         override fun getArguments(): Array<String> {
@@ -90,7 +90,7 @@ class PatVPatCommand(override val service: PatVPatService) : ABotCommandWithSubC
                 )
                 PatVPatManager.OperationResult.SUCCESS -> onSuccess.invoke(conversation.language)
                 else -> {
-                    logger.error { "Unspecified error occurred!!" }
+                    getLogger().error { "Unspecified error occurred!!" }
                     CommonStrings.getString(conversation.language, "unknownError")
                 }
             }

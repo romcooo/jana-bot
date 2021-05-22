@@ -4,9 +4,9 @@ import com.elbekD.bot.http.await
 import com.elbekD.bot.types.Chat
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.JobScheduler
 import org.koppakurhiev.janabot.common.getLocale
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 import org.koppakurhiev.janabot.telegram.services.patVpat.data.Answer
@@ -17,8 +17,8 @@ import org.litote.kmongo.*
 import java.time.Duration
 import java.time.LocalDateTime
 
-class PatVPatManager(val bot: ITelegramBot) : ALogged() {
-
+class PatVPatManager(val bot: ITelegramBot) {
+    private val logger = getLogger()
     private val questionTTL = Duration.ofDays(2)
     private val reminderTTL = Duration.ofHours(37)
     private val data: PatVPatData
@@ -164,7 +164,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
     }
 
     suspend fun broadcast(buildMessage: (chat: Chat) -> String) {
-        logger.trace { "Broadcasting message" }
+        logger.trace { "Broadcasting a message" }
         data.subscribers.forEach {
             val chat = bot.telegramBot.getChat(it.chatId).await()
             val text = buildMessage.invoke(chat)
@@ -197,6 +197,7 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val subscriberData = data.subscribers.find { it.chatId == chat.id }
         subscriberData?.reminders = true
+        logger.debug { "Turning on reminders for ${chat.id}" }
         return updateData()
     }
 
@@ -204,18 +205,19 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
         val subscriberData = data.subscribers.find { it.chatId == chat.id }
         subscriberData?.reminders = false
+        logger.debug { "Turning of reminders for ${chat.id}" }
         return updateData()
     }
 
     fun addQuestion(text: String, creator: String): OperationResult {
         val newQuestion = Question(text = text, creator = creator)
-        logger.debug { "Recording question $text from $creator" }
+        logger.info { "Recording question $text from $creator" }
         if (!questionsCollection.insertOne(newQuestion).wasAcknowledged()) return OperationResult.SAVE_FAILED
         return OperationResult.SUCCESS
     }
 
     fun addAnswer(chat: Chat, text: String): OperationResult {
-        logger.debug { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
+        logger.info { "Recording an answer from ${chat.first_name} ${chat.last_name}" }
         if (chat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (data.questionId == null) return OperationResult.NO_QUESTION_ASKED
         if (!isSubscribed(chat.id)) return OperationResult.NOT_SUBSCRIBED
@@ -235,8 +237,8 @@ class PatVPatManager(val bot: ITelegramBot) : ALogged() {
         if (initChat.type != "private") return OperationResult.NOT_VALID_CHAT
         if (!isSubscribed(initChat.id)) return OperationResult.NOT_SUBSCRIBED
         if (data.questionId == null) return OperationResult.NO_QUESTION_ASKED
-        logger.info { "Skipping a question" }
         val skipped = questionsCollection.findOneById(data.questionId!!) ?: return OperationResult.FAILURE
+        logger.info { "Skipping the question '${skipped.text}'" }
         broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "skipNotice", skipped.text) }
         skipped.skipped = true
         questionsCollection.updateOne(skipped)

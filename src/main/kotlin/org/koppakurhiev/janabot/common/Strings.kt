@@ -8,7 +8,7 @@ import org.litote.kmongo.findOne
 import org.litote.kmongo.getCollection
 import java.util.*
 
-open class Strings(bundleAddress: String, locale: Locale) : ALogged() {
+open class Strings(bundleAddress: String, locale: Locale) {
 
     private val messages: Properties
 
@@ -19,7 +19,7 @@ open class Strings(bundleAddress: String, locale: Locale) : ALogged() {
         messages = Properties(default)
         stringsStream = javaClass.getResourceAsStream(bundleAddress + locale.localeSuffix + ".properties")
         messages.load(stringsStream)
-        logger.info { "${locale.name} locale loaded from $bundleAddress" }
+        getLogger().info { "${locale.name} locale loaded from $bundleAddress" }
     }
 
     open fun get(key: String, vararg args: Any?): String {

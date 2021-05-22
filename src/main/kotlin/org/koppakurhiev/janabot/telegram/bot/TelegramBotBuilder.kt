@@ -4,11 +4,11 @@ import com.elbekD.bot.Bot
 import com.elbekD.bot.types.BotCommand
 import com.elbekD.bot.types.CallbackQuery
 import com.elbekD.bot.types.Message
-import org.koppakurhiev.janabot.common.ALogged
+import org.koppakurhiev.janabot.common.getLogger
 import java.util.*
 import kotlin.reflect.KSuspendFunction2
 
-class TelegramBotBuilder(properties: Properties, constType: ConstructionType = ConstructionType.POLLING) : ALogged() {
+class TelegramBotBuilder(properties: Properties, constType: ConstructionType = ConstructionType.POLLING) {
 
     private val uiCommands: MutableList<BotCommand> = mutableListOf()
 
@@ -46,7 +46,7 @@ class TelegramBotBuilder(properties: Properties, constType: ConstructionType = C
         bot.onCallbackQuery {
             val data = it.data
             if (data == null) {
-                logger.warn { "Call back query without data" }
+                getLogger().warn { "Call back query without data" }
             }
             action.invoke(it, data)
         }

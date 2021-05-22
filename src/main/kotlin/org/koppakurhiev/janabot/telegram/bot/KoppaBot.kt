@@ -1,6 +1,7 @@
 package org.koppakurhiev.janabot.telegram.bot
 
 import com.elbekD.bot.types.CallbackQuery
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.TelegramStrings
 import org.koppakurhiev.janabot.telegram.services.DefaultCommandsService
 import org.koppakurhiev.janabot.telegram.services.backpack.BackpackService
@@ -26,16 +27,18 @@ class KoppaBot : ATelegramBot("KoppaTelegram") {
     }
 
     override suspend fun stop() {
+        getLogger().info { "Deconstructing bot ${properties.getProperty("bot.username")}" }
         deconstructServices()
         telegramBot.stop()
+        getLogger().info("${properties.getProperty("bot.username")} stopped.")
     }
 
     override suspend fun launch() {
-        logger.info { "Building bot ${properties.getProperty("bot.username")}" }
+        getLogger().info { "Building bot ${properties.getProperty("bot.username")}" }
         buildServices()
         buildBot()
         initializeServices()
-        logger.info("${properties.getProperty("bot.username")} started.")
+        getLogger().info("${properties.getProperty("bot.username")} started.")
     }
 
     override fun onCallbackQueryWithNoData(query: CallbackQuery) {

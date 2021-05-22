@@ -1,5 +1,6 @@
 package org.koppakurhiev.janabot.telegram.services.backpack
 
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.bot.ChatData
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 import org.litote.kmongo.eq
@@ -8,13 +9,14 @@ import org.litote.kmongo.getCollection
 import org.litote.kmongo.updateOne
 
 class BackpackManager(val bot: ITelegramBot) {
-
+    private val logger = getLogger()
     private val collection = bot.database.getCollection<ChatData>()
 
     fun createBackpack(chatId: Long, backpackName: String): Boolean {
         val chatData = collection.findOne(ChatData::chatId eq chatId) ?: throw NullPointerException()
         val result = chatData.backpacks.add(Backpack(backpackName))
         collection.updateOne(chatData)
+        logger.info { "Backpack $backpackName create in channel $chatId" }
         return result
     }
 
@@ -22,6 +24,7 @@ class BackpackManager(val bot: ITelegramBot) {
         val chatData = collection.findOne(ChatData::chatId eq chatId) ?: throw NullPointerException()
         val result = chatData.backpacks.removeIf { it.name == backpackName }
         collection.updateOne(chatData)
+        logger.info { "Backpack $backpackName deleted in channel $chatId" }
         return result
     }
 
@@ -44,6 +47,7 @@ class BackpackManager(val bot: ITelegramBot) {
         val backpack = chatData.backpacks.find { it.name == backpackName } ?: throw NullPointerException()
         val result = backpack.content.add(value)
         collection.updateOne(chatData)
+        logger.info { "Item added to a backpack at $chatId" }
         return result
     }
 
@@ -52,6 +56,7 @@ class BackpackManager(val bot: ITelegramBot) {
         val backpack = chatData.backpacks.find { it.name == backpackName } ?: throw NullPointerException()
         val result = backpack.content.remove(value)
         collection.updateOne(chatData)
+        logger.info { "Item removed form a backpack at $chatId" }
         return result
     }
 
@@ -63,6 +68,7 @@ class BackpackManager(val bot: ITelegramBot) {
             backpack.content.remove(item)
             collection.updateOne(chatData)
         }
+        logger.info { "Item popped from a backpack at $chatId" }
         return item
     }
 }

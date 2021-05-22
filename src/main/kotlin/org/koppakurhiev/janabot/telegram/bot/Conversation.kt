@@ -3,14 +3,14 @@ package org.koppakurhiev.janabot.telegram.bot
 import com.elbekD.bot.http.TelegramApiError
 import com.elbekD.bot.http.await
 import com.elbekD.bot.types.Message
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.JobScheduler
+import org.koppakurhiev.janabot.common.getLogger
 import org.litote.kmongo.eq
 import org.litote.kmongo.findOne
 import org.litote.kmongo.getCollection
 import java.util.*
 
-class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
+class Conversation(val bot: ITelegramBot, val chatId: Long) {
 
     private val messageList = ArrayList<Message>()
     private val chatData: ChatData
@@ -61,14 +61,14 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
 
     fun burnConversation(timeToLive: MessageLifetime) {
         if (!isOnFire) {
-            logger.trace { "Scheduling conversation to be deleted: $this in ${timeToLive.length / 1000} seconds." }
+            getLogger().trace { "Scheduling conversation to be deleted: $this in ${timeToLive.length / 1000} seconds." }
             JobScheduler.schedule(object : TimerTask() {
                 override fun run() {
                     messageList.forEach {
                         try {
                             bot.telegramBot.deleteMessage(it.chat.id, it.message_id)
                         } catch (error: TelegramApiError) {
-                            logger.warn("Telegram could not delete a message", error)
+                            getLogger().warn("Telegram could not delete a message", error)
                         }
                     }
                 }
@@ -79,13 +79,13 @@ class Conversation(val bot: ITelegramBot, val chatId: Long) : ALogged() {
     }
 
     fun burnMessage(message: Message, timeToLive: MessageLifetime) {
-        logger.trace { "Scheduling message to be deleted: $message in ${timeToLive.length / 1000} seconds." }
+        getLogger().trace { "Scheduling message to be deleted: $message in ${timeToLive.length / 1000} seconds." }
         JobScheduler.schedule(object : TimerTask() {
             override fun run() {
                 try {
                     bot.telegramBot.deleteMessage(message.chat.id, message.message_id)
                 } catch (error: TelegramApiError) {
-                    logger.warn("Telegram could not delete a message", error)
+                    getLogger().warn("Telegram could not delete a message", error)
                 }
             }
         }, timeToLive.length)

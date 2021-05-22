@@ -14,14 +14,14 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.ValueRange
 import org.koppakurhiev.janabot.IBot
-import org.koppakurhiev.janabot.common.ALogged
+import org.koppakurhiev.janabot.common.getLogger
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStreamReader
 import java.security.GeneralSecurityException
 
-abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALogged() {
+abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T> {
     private val tokensDirectory = bot.properties.getProperty("sheets.tokens")
     private val credentialsPath = bot.properties.getProperty("sheets.credentials")
     private val jsonFactory: JsonFactory = JacksonFactory.getDefaultInstance()
@@ -37,8 +37,8 @@ abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALo
             service.spreadsheets().values().update(sheetsId, updateCoordinates, range)
         request.valueInputOption = "RAW"
         val response = request.execute()
-        logger.trace { response }
-        return (response.updatedCells > 0)
+        getLogger().trace { response }
+        return response.updatedCells > 0
     }
 
     @Throws(IOException::class, GeneralSecurityException::class)
@@ -48,7 +48,6 @@ abstract class ASheetsRepository<T>(private val bot: IBot) : IRepository<T>, ALo
             .execute()
         val values: List<List<Any>> = response.getValues()
         return if (values.isEmpty()) {
-            logger.warn { "No data found." }
             null
         } else {
             parse(values)

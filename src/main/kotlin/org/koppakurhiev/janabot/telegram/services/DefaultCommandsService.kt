@@ -3,10 +3,10 @@ package org.koppakurhiev.janabot.telegram.services
 import com.elbekD.bot.types.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.koppakurhiev.janabot.common.ALogged
 import org.koppakurhiev.janabot.common.CommonStrings
 import org.koppakurhiev.janabot.common.Strings
 import org.koppakurhiev.janabot.common.getLocale
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.TelegramStrings
 import org.koppakurhiev.janabot.telegram.bot.*
 import org.litote.kmongo.eq
@@ -28,7 +28,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
         //Nothing
     }
 
-    private class Help(override val service: IBotService) : IBotCommand, ALogged() {
+    private class Help(override val service: IBotService) : IBotCommand {
         override val command = "help"
 
         override fun getUiCommand(): BotCommand {
@@ -52,7 +52,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
             conversation.replyMessage(messageBuilder.toString())
             //TODO swap for close button
             conversation.burnConversation(MessageLifetime.MEDIUM)
-            logger.trace { "/help command executed in channel " + message.chat.id }
+            getLogger().trace { "/help command executed in channel " + message.chat.id }
         }
 
         override suspend fun onCallbackQuery(query: CallbackQuery, arguments: String): Boolean {
@@ -64,7 +64,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
         }
     }
 
-    private class Start(override val service: IBotService) : IBotCommand, ALogged() {
+    private class Start(override val service: IBotService) : IBotCommand {
         override val command = "start"
 
         override fun getUiCommand(): BotCommand {
@@ -79,7 +79,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
             val conversation = Conversation(bot, message)
             val username = message.from?.username ?: CommonStrings.getString(conversation.language, "person")
             conversation.replyMessage(TelegramStrings.getString(conversation.language, "start.text", username))
-            logger.debug { "/start command executed in channel " + message.chat.id }
+            getLogger().info { "/start command executed in channel " + message.chat.id }
         }
 
         override suspend fun onCallbackQuery(query: CallbackQuery, arguments: String): Boolean {
@@ -118,7 +118,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
         }
     }
 
-    private class Language(override val service: IBotService) : IBotCommand, ALogged() {
+    private class Language(override val service: IBotService) : IBotCommand {
         override val command = "language"
 
         override fun getUiCommand(): BotCommand {
@@ -160,7 +160,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
             val collection = bot.database.getCollection<ChatData>()
             val data = collection.findOne(ChatData::chatId eq chatId)
             if (data == null) {
-                logger.error { "Set language called but not ChatData found" }
+                getLogger().error { "Set language called but no ChatData found" }
             } else {
                 data.language = locale
                 collection.updateOne(data)
@@ -179,6 +179,7 @@ class DefaultCommandsService(override val bot: ITelegramBot) : IBotService {
         override suspend fun onCommand(message: Message, arguments: String?) {
             val user = message.from
             if (bot.isBotAdmin(user?.username)) {
+                getLogger().info { "Broadcasting message '$arguments'" }
                 val chatsCollection = bot.database.getCollection<ChatData>().find()
                 chatsCollection.forEach {
                     val conversation = Conversation(bot, it.chatId)

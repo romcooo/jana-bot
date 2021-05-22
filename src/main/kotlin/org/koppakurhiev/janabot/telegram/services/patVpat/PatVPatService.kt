@@ -8,7 +8,7 @@ import org.koppakurhiev.janabot.telegram.bot.IBotCommand
 import org.koppakurhiev.janabot.telegram.bot.IBotService
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 
-class PatVPatService(override val bot: ITelegramBot) : IBotService, ALogged() {
+class PatVPatService(override val bot: ITelegramBot) : IBotService {
 
     val patVPatManager = PatVPatManager(bot)
 
