@@ -8,6 +8,7 @@ import java.time.LocalDateTime
 data class TimerData @JvmOverloads constructor(
     val _id: Id<TimerData> = newId(),
     var timer: LocalDateTime = LocalDateTime.now(),
-    var lastRunLength: Duration = Duration(),
-    var record: Duration = Duration()
+    var lastRunLength: Duration? = null,
+    var record: Duration? = null,
+    var chatId: Long? = null
 )
