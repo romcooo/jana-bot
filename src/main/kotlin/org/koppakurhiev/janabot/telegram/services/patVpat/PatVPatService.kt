@@ -2,7 +2,10 @@ package org.koppakurhiev.janabot.telegram.services.patVpat
 
 import com.elbekD.bot.types.Message
 import org.jetbrains.annotations.PropertyKey
-import org.koppakurhiev.janabot.common.*
+import org.koppakurhiev.janabot.common.AStringsProvider
+import org.koppakurhiev.janabot.common.CommonStrings
+import org.koppakurhiev.janabot.common.Strings
+import org.koppakurhiev.janabot.common.getLocale
 import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.IBotCommand
 import org.koppakurhiev.janabot.telegram.bot.IBotService

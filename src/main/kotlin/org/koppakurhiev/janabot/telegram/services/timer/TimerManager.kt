@@ -63,12 +63,18 @@ class TimerManager(val bot: ITelegramBot) {
         timerData.lastRunLength = lastRun
         val oldRecord = timerData.record
         logger.info { "$chatId - Timer reset after $lastRun sec." }
-        if (oldRecord != null && oldRecord < lastRun) {
-            timerData.record = lastRun
-            return if (save(timerData) == OperationResult.SUCCESS)
-                OperationResult.RECORD_BROKEN else OperationResult.SAVE_FAILED
+        val result = when {
+            oldRecord == null -> {
+                timerData.record = lastRun
+                OperationResult.SUCCESS
+            }
+            oldRecord < lastRun -> {
+                timerData.record = lastRun
+                OperationResult.RECORD_BROKEN
+            }
+            else -> OperationResult.SUCCESS
         }
-        return save(timerData)
+        return if (save(timerData) != OperationResult.SUCCESS) OperationResult.SAVE_FAILED else result
     }
 
     enum class OperationResult {
