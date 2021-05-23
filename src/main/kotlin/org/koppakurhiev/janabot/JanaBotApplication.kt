@@ -1,67 +1,77 @@
 package org.koppakurhiev.janabot
 
-import com.elbekD.bot.Bot
-import com.elbekD.bot.types.Message
-import org.koppakurhiev.janabot.features.StringProvider
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import org.koppakurhiev.janabot.common.getArg
+import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.persistence.MongoRepository
-import org.koppakurhiev.janabot.services.DefaultServices
-import org.koppakurhiev.janabot.services.IBotService
-import org.koppakurhiev.janabot.services.patVpat.PatVPatService
-import org.koppakurhiev.janabot.services.subgroups.SubGroupsService
-import org.koppakurhiev.janabot.services.timer.TimerService
-import org.koppakurhiev.janabot.utils.ALogged
-import org.koppakurhiev.janabot.utils.BotBuilder
-import java.util.*
+import org.koppakurhiev.janabot.telegram.bot.KoppaBot
 
-fun main() {
-    JanaBot.launch()
+object BotRunner {
+    val bots: Set<IBot> = setOf(
+        KoppaBot(),
+    )
+
+    suspend fun launch() {
+        val jobs = mutableListOf<Job>()
+        bots.forEach {
+            jobs.add(GlobalScope.launch {
+                try {
+                    it.launch()
+                } catch (exception: Exception) {
+                    getLogger().error("The bot ${it.name} failed to start", exception)
+                }
+            })
+        }
+        jobs.joinAll()
+    }
 }
 
-object JanaBot : ALogged() {
-    lateinit var bot: Bot
-    lateinit var messages: StringProvider
-    lateinit var services: Set<IBotService>
-    val properties = Properties()
+suspend fun main() {
+    BotRunner.launch()
+    CommandLineInterface.launch()
+}
 
-    init {
-        val configStream = javaClass.getResourceAsStream("/config.properties")
-        properties.load(configStream)
-        configStream.close()
-    }
-
-    //Add services here when implemented
-    private fun buildServices() {
-        val localServices = setOf(
-            DefaultServices(),
-            SubGroupsService(),
-            TimerService(),
-            PatVPatService(),
-        )
-        services = localServices
-    }
+private object CommandLineInterface {
+    val logger = getLogger()
+    var mainJob: Job? = null
 
     fun launch() {
-        logger.info { "Building bot ${properties.getProperty("bot.username")}" }
-        MongoRepository.initialize()
-        messages = StringProvider("en")
-        buildServices()
-        bot = BotBuilder(properties)
-            .withServices(services)
-            .onMessage(this::onMessage)
-            .build()
-        bot.start()
-        logger.info("${properties.getProperty("bot.username")} started.")
-    }
-
-    private suspend fun onMessage(message: Message) {
-        services.forEach {
-            it.onMessage(message)
+        mainJob = GlobalScope.launch {
+            readCmdLine()
         }
     }
 
-    fun isAdmin(username: String?): Boolean {
-        if (username == null) return false
-        val admins = properties.getProperty("admins").split(", ")
-        return admins.contains(username)
+    private suspend fun readCmdLine() {
+        var command: List<String> = emptyList()
+        logger.info { "Listening for command line commands" }
+        while (command.getArg(0) != "stop") {
+            command = readLine()!!.split(" ")
+            when (command.getArg(0)) {
+                "stop" -> onStopCommand()
+            }
+        }
+    }
+
+    fun getBotForName(botName: String): IBot? {
+        return BotRunner.bots.find { it.name == botName }
+    }
+
+    suspend fun onStopCommand() {
+        logger.info { "The app is shutting down" }
+        val jobs = mutableListOf<Job>()
+        BotRunner.bots.forEach {
+            jobs.add(GlobalScope.launch {
+                it.stop()
+            })
+        }
+        jobs.add(
+            GlobalScope.launch {
+                MongoRepository.close()
+            }
+        )
+        jobs.joinAll()
     }
 }

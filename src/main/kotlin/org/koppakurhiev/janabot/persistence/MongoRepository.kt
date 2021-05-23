@@ -1,14 +1,34 @@
 package org.koppakurhiev.janabot.persistence
 
+import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoDatabase
-import org.koppakurhiev.janabot.JanaBot
 import org.litote.kmongo.KMongo
+import java.util.*
 
-object MongoRepository {
-    lateinit var db: MongoDatabase
+class MongoRepository(properties: Properties) {
+    val database: MongoDatabase
 
-    fun initialize() {
-        val client = KMongo.createClient(JanaBot.properties.getProperty("db.string"))
-        db = client.getDatabase(JanaBot.properties.getProperty("db.name"))
+    init {
+        open(properties.getProperty("db.string"))
+        if (client == null) {
+            throw NullPointerException("Database client is null")
+        } else {
+            database = client!!.getDatabase(properties.getProperty("db.name"))
+        }
+    }
+
+    companion object {
+        private var client: MongoClient? = null
+
+        fun open(dbString: String) {
+            if (client == null) {
+                client = KMongo.createClient(dbString)
+            }
+        }
+
+        fun close() {
+            client?.close()
+            client = null
+        }
     }
 }
