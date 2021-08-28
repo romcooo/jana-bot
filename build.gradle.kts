@@ -15,9 +15,9 @@ repositories {
 }
 
 dependencies {
-    implementation("com.google.api-client:google-api-client:1.32.1")
-    implementation("com.google.oauth-client:google-oauth-client-jetty:1.32.1")
-    implementation("com.google.apis:google-api-services-sheets:v4-rev20210629-1.32.1")
+    implementation("com.google.api-client:google-api-client:1.30.4")
+    implementation("com.google.oauth-client:google-oauth-client-jetty:1.30.6")
+    implementation("com.google.apis:google-api-services-sheets:v4-rev581-1.25.0")
 
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
@@ -31,7 +31,7 @@ dependencies {
     // coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1-native-mt")
     //MongoDB
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.4")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("org.litote.kmongo:kmongo:4.2.8")
 }
 
