@@ -20,15 +20,17 @@ class Launch(parent: PatVPatCommand) : PatVPatCommand.APatVPatSubCommand(parent)
     }
 }
 
-class Stop(override val parent: PatVPatCommand) : IBotSubCommand {
+class Stop(parent: PatVPatCommand) : PatVPatCommand.APatVPatSubCommand(parent) {
     override val command = "stop"
 
-    override fun getArguments(): Array<String> {
-        return emptyArray()
-    }
-
     override suspend fun onCommand(message: Message, arguments: String?) {
-        TODO("Not yet implemented")
+        val user = message.from?.username
+        if (user != null && bot.isBotAdmin(user)) {
+            val conversation = Conversation(bot, message)
+            standardReply(parent.service.patVPatManager.stop(), conversation) {
+                PatVPatStrings.getString(it, "stop.reply")
+            }
+        }
     }
 
     override fun help(chat: Chat): String {

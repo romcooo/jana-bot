@@ -13,5 +13,4 @@ object JobScheduler {
     fun schedule(delay: Long, action: TimerTask.() -> Unit) {
         timer.schedule(delay, action)
     }
-
 }

@@ -43,18 +43,36 @@ class PatVPatManager(val bot: ITelegramBot) {
 
     suspend fun launch(): OperationResult {
         logger.info { "Launching the 5v5 game!" }
-        return if (data.questionId != null) {
-            logger.info { "Swapping the active question" }
-            changeQuestion(true)
+        val questionId = data.questionId
+        return if (questionId != null) {
+            val currentQuestion = questionsCollection.findOneById(questionId)
+            broadcast { chat ->
+                PatVPatStrings.getString(
+                    chat.getLocale(bot),
+                    "questionStatement",
+                    getSubscribersCount(),
+                    currentQuestion?.text ?: ""
+                )
+            }
+            OperationResult.SUCCESS
         } else {
-            changeQuestion(false)
+            changeQuestion()
         }
     }
 
-    private suspend fun changeQuestion(report: Boolean): OperationResult {
+    suspend fun stop(): OperationResult {
+        logger.info { "Shutting down the 5v5 game." }
+        broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "stop") }
+        data.nextQuestionAt = null
+        data.reminderAt = null
+        data.questionId = null
+        return updateData()
+    }
+
+    private suspend fun changeQuestion(): OperationResult {
         logger.trace { "Launching changeQuestion routine" }
         val oldQuestion = data.questionId?.let { questionsCollection.findOneById(it) }
-        if (oldQuestion != null && report) {
+        if (oldQuestion != null) {
             logger.debug { "Printing report to subscribed users" }
             val size = answersCollection.countDocuments(Answer::questionTag eq oldQuestion._id)
             broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "finish", size, oldQuestion.text) }
@@ -116,7 +134,7 @@ class PatVPatManager(val bot: ITelegramBot) {
         if (question == null) {
             JobScheduler.schedule(scheduleIn.toMillis()) {
                 GlobalScope.launch {
-                    changeQuestion(false)
+                    changeQuestion()
                 }
             }
         } else {
@@ -125,7 +143,7 @@ class PatVPatManager(val bot: ITelegramBot) {
                 GlobalScope.launch {
                     if (question == data.questionId) {
                         data.nextQuestionAt = null
-                        changeQuestion(true)
+                        changeQuestion()
                     } else {
                         logger.trace { "Leftover timer expired" }
                     }
@@ -242,7 +260,7 @@ class PatVPatManager(val bot: ITelegramBot) {
         broadcast { chat -> PatVPatStrings.getString(chat.getLocale(bot), "skipNotice", skipped.text) }
         skipped.skipped = true
         questionsCollection.updateOne(skipped)
-        return changeQuestion(false)
+        return changeQuestion()
     }
 
     fun isSubscribed(chatId: Long): Boolean {
