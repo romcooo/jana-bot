@@ -58,7 +58,11 @@ class TagCommand(override val service: SubGroupsService) : IBotCommand {
         suspend fun tagMembers(subGroupsManager: SubGroupsManager, chatId: Long, vararg groupNames: String): String? {
             val users = HashSet<String>()
             groupNames.forEach {
-                val members = subGroupsManager.getMembersList(it, chatId)
+                val members = if (it.lowercase() == "everyone") {
+                    subGroupsManager.getAllMembers(chatId)
+                } else {
+                    subGroupsManager.getMembersList(it, chatId)
+                }
                 if (members != null) {
                     users.addAll(members)
                 }
