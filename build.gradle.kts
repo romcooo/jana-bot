@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "sk.koppakurhiev"
-version = "1.0.1"
+version = "1.1"
 
 repositories {
     mavenCentral()
@@ -24,15 +24,15 @@ dependencies {
     // bot
     implementation("com.github.elbekD:kt-telegram-bot:1.3.8")
     // logging
-    implementation("io.github.microutils:kotlin-logging:2.0.4")
+    implementation("io.github.microutils:kotlin-logging:2.0.11")
     implementation("ch.qos.logback:logback-classic:1.3.0-alpha5")
     // json
-    implementation("com.beust:klaxon:5.0.1")
+    implementation("com.beust:klaxon:5.5")
     // coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1-native-mt")
     //MongoDB
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
-    implementation("org.litote.kmongo:kmongo:4.2.4")
+    implementation("org.litote.kmongo:kmongo:4.2.8")
 }
 
 tasks.withType<KotlinCompile> {
