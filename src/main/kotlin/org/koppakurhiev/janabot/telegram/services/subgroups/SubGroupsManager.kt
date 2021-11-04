@@ -1,5 +1,6 @@
 package org.koppakurhiev.janabot.telegram.services.subgroups
 
+import com.elbekD.bot.http.await
 import com.elbekD.bot.types.User
 import org.koppakurhiev.janabot.common.getLogger
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
@@ -14,7 +15,7 @@ class SubGroupsManager(val bot: ITelegramBot) {
         if (getSubGroup(chatId, groupName) != null) return OperationResult.GROUP_ALREADY_EXISTS
         logger.debug { "$chatId - Creating group $groupName" }
         val newSubgroup = SubGroup(
-            name = groupName,
+            name = groupName.lowercase(),
             chatId = chatId,
             admins = mutableListOf(creatorId)
         )
@@ -47,7 +48,7 @@ class SubGroupsManager(val bot: ITelegramBot) {
 
     private fun getSubGroup(chatId: Long, groupName: String): SubGroup? {
         logger.trace { "$chatId - Obtaining SubGroup '$groupName'" }
-        return collection.findOne(SubGroup::chatId eq chatId, SubGroup::name eq groupName)
+        return collection.findOne(SubGroup::chatId eq chatId, SubGroup::name eq groupName.lowercase())
     }
 
     fun renameSubGroup(oldGroupName: String, newGroupName: String, chatId: Long): OperationResult {
@@ -80,6 +81,16 @@ class SubGroupsManager(val bot: ITelegramBot) {
     fun getAllGroups(): List<SubGroup> {
         logger.trace { "Getting all groups" }
         return collection.find().toList()
+    }
+
+    suspend fun getAllMembers(chatId: Long): List<String> {
+        val admins = bot.telegramBot.getChatAdministrators(chatId).await()
+        return admins.filter {
+            val username = it.user.username
+            username != null && !username.endsWith("_bot")
+        }.map {
+            it.user.username!!
+        }
     }
 
     fun addAdmin(chatId: Long, groupName: String, userId: Long): OperationResult {
