@@ -83,14 +83,21 @@ class SubGroupsManager(val bot: ITelegramBot) {
         return collection.find().toList()
     }
 
-    suspend fun getAllMembers(chatId: Long): List<String> {
-        val admins = bot.telegramBot.getChatAdministrators(chatId).await()
-        return admins.filter {
-            val username = it.user.username
-            username != null && !username.endsWith("_bot")
-        }.map {
-            it.user.username!!
-        }
+    suspend fun getAllTaggableMembers(chatId: Long): List<String> {
+        return bot.telegramBot
+            .getChatAdministrators(chatId).await()
+            .filter {
+                val username = it.user.username
+                username != null && !username.endsWith("_bot")
+            }.map {
+                it.user.username!!
+            }
+    }
+
+    suspend fun getUntaggableMembers(chatId: Long): List<String> {
+        return bot.telegramBot.getChatAdministrators(chatId).await()
+            .filter { it.user.username == null }
+            .map { "${it.user.first_name} ${it.user.last_name ?: "no_last_name"}" }
     }
 
     fun addAdmin(chatId: Long, groupName: String, userId: Long): OperationResult {

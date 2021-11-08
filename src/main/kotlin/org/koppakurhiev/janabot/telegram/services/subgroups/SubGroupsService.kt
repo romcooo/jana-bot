@@ -25,9 +25,9 @@ class SubGroupsService(override val bot: ITelegramBot) : IBotService {
             val matches = regex.findAll(message.text.toString())
             val taggedChannels = mutableListOf<String>()
             matches.forEach { taggedChannels.add(it.value.drop(1)) }
-            val text = TagCommand.tagMembers(
+            val text = TagCommand.getTagMessage(
                 subGroupsManager,
-                message.chat.id,
+                conversation,
                 *taggedChannels.toTypedArray()
             )
             if (text != null) conversation.replyMessage(text)
