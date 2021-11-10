@@ -97,7 +97,7 @@ class TagCommand(override val service: SubGroupsService) : IBotCommand {
         ): String? =
             groupNames
                 .flatMap { subGroupsManager.getMembersList(it, chatId) ?: emptyList() }
-                .toHashSet() // TODO - Is this needed for some reason like performance? @ceko
+                .distinct()
                 .ifEmpty { return null }
                 .joinToString(separator = " ") { "@$it" }
     }
