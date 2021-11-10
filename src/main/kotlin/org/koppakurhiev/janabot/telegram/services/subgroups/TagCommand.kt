@@ -27,7 +27,7 @@ class TagCommand(override val service: SubGroupsService) : IBotCommand {
         val conversation = Conversation(service.bot, message)
         val args = message.text?.split(" ")?.drop(1)
         if (args != null) {
-            val text = tagMembers(subGroupsManager, conversation.chatId, *args.toTypedArray())
+            val text = getTagMessage(subGroupsManager, conversation, *args.toTypedArray())
             val reply =
                 conversation.replyMessage(
                     text ?: SubGroupStrings.getString(
@@ -55,26 +55,51 @@ class TagCommand(override val service: SubGroupsService) : IBotCommand {
     }
 
     companion object {
-        suspend fun tagMembers(subGroupsManager: SubGroupsManager, chatId: Long, vararg groupNames: String): String? {
-            val users = HashSet<String>()
-            groupNames.forEach {
-                val members = if (it.lowercase() == "everyone") {
-                    subGroupsManager.getAllMembers(chatId)
-                } else {
-                    subGroupsManager.getMembersList(it, chatId)
-                }
-                if (members != null) {
-                    users.addAll(members)
-                }
-            }
-            if (users.isNotEmpty()) {
-                val tags = StringBuilder()
-                tags.append("Hey, ")
-                users.forEach { user -> tags.append("@$user ") }
-                return tags.toString()
-            }
-            return null
+
+        suspend fun getTagMessage(
+            subGroupsManager: SubGroupsManager,
+            conversation: Conversation,
+            vararg groupNames: String
+        ): String? {
+            val tagMessage =
+                if (groupNames.find { it.lowercase() == "everyone" } != null) {
+                    val sb = StringBuilder(tagEveryone(subGroupsManager, conversation.chatId))
+                    val untaggable = listUntaggable(subGroupsManager, conversation.chatId)
+                    if (untaggable.isNotEmpty()) {
+                        sb
+                            .append("\n")
+                            .append(
+                                SubGroupStrings.getString(
+                                    conversation.language,
+                                    "tag.untaggable",
+                                    untaggable
+                                )
+                            )
+                    }
+                    sb.toString()
+                } else
+                    tagMembers(subGroupsManager, conversation.chatId, *groupNames)
+            tagMessage?.let { return "Hey, $it" } ?: return null
         }
+
+        private suspend fun tagEveryone(subGroupsManager: SubGroupsManager, chatId: Long): String =
+            subGroupsManager.getAllTaggableMembers(chatId).joinToString(separator = " ") { "@$it" }
+
+        private suspend fun listUntaggable(subGroupsManager: SubGroupsManager, chatId: Long): String =
+            subGroupsManager.getUntaggableMembers(chatId)
+                .ifEmpty { return "" }
+                .joinToString(separator = ", ") { it }
+
+        private suspend fun tagMembers(
+            subGroupsManager: SubGroupsManager,
+            chatId: Long,
+            vararg groupNames: String
+        ): String? =
+            groupNames
+                .flatMap { subGroupsManager.getMembersList(it, chatId) ?: emptyList() }
+                .distinct()
+                .ifEmpty { return null }
+                .joinToString(separator = " ") { "@$it" }
     }
 
 }
