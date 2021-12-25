@@ -12,6 +12,10 @@ import org.koppakurhiev.janabot.telegram.bot.ABotCommandWithSubCommands
 import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.IBotSubCommand
 import org.koppakurhiev.janabot.telegram.bot.MessageLifetime
+import org.koppakurhiev.janabot.telegram.services.patVpat.export.ExportAllQuestions
+import org.koppakurhiev.janabot.telegram.services.patVpat.export.ExportAnswers
+import org.koppakurhiev.janabot.telegram.services.patVpat.export.ExportEverything
+import org.koppakurhiev.janabot.telegram.services.patVpat.export.ExportNew
 
 class PatVPatCommand(override val service: PatVPatService) : ABotCommandWithSubCommands() {
     override val command = "5v5"
@@ -26,10 +30,13 @@ class PatVPatCommand(override val service: PatVPatService) : ABotCommandWithSubC
         Skip(this),
         Stats(this),
         Rules(this),
-        ExportSubCommand(this),
         Launch(this),
         Stop(this),
-        Broadcast(this)
+        Broadcast(this),
+        ExportAllQuestions(this),
+        ExportNew(this),
+        ExportEverything(this),
+        ExportAnswers(this)
     )
 
     override fun getUiCommand(): BotCommand {

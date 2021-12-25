@@ -10,10 +10,12 @@ import org.koppakurhiev.janabot.telegram.bot.Conversation
 import org.koppakurhiev.janabot.telegram.bot.IBotCommand
 import org.koppakurhiev.janabot.telegram.bot.IBotService
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
+import org.koppakurhiev.janabot.telegram.services.patVpat.export.PatVPatExportManager
 
 class PatVPatService(override val bot: ITelegramBot) : IBotService {
 
     val patVPatManager = PatVPatManager(bot)
+    val patVPatExportManager = PatVPatExportManager(bot)
 
     override val commands: Array<IBotCommand> = arrayOf(
         PatVPatCommand(this)
