@@ -19,6 +19,7 @@ open class Strings(bundleAddress: String, locale: Locale) {
         messages = Properties(default)
         stringsStream = javaClass.getResourceAsStream(bundleAddress + locale.localeSuffix + ".properties")
         messages.load(stringsStream)
+        stringsStream?.close()
         getLogger().info { "${locale.name} locale loaded from $bundleAddress" }
     }
 
