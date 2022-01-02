@@ -2,6 +2,7 @@ package org.koppakurhiev.janabot.telegram.services.patVpat.export
 
 import com.google.api.client.util.ArrayMap
 import org.koppakurhiev.janabot.common.getLogger
+import org.koppakurhiev.janabot.telegram.bot.ChatData
 import org.koppakurhiev.janabot.telegram.bot.ITelegramBot
 import org.koppakurhiev.janabot.telegram.services.patVpat.data.Answer
 import org.koppakurhiev.janabot.telegram.services.patVpat.data.Question
@@ -13,6 +14,7 @@ class PatVPatExportManager(val bot: ITelegramBot) {
 
     private val answersCollection = bot.database.getCollection<Answer>("5v5_answers")
     private val questionsCollection = bot.database.getCollection<Question>("5v5_questions")
+    private val chatsCollection = bot.database.getCollection<ChatData>("chatData")
     private val sheets = SheetsRepository(bot)
 
     fun exportQuestions(sheetId: String): Boolean {
@@ -70,6 +72,32 @@ class PatVPatExportManager(val bot: ITelegramBot) {
         } else {
             logger.error { "Export of $n questions with answers failed" }
             false
+        }
+    }
+
+    fun exportOneQuestion(sheetId: String, questionId: Id<Question>): Boolean {
+        val question = questionsCollection.findOne(Question::_id eq questionId)
+        return if (question != null) {
+            val answers = answersCollection.find(Answer::questionTag eq questionId).toList()
+            val dataMap = mapOf(Pair(question, answers))
+            val usersMap = mutableMapOf<Long, String?>()
+            chatsCollection.find().toList().forEach {
+                usersMap[it.chatId] = getUserName(it.chatId)
+            }
+            return sheets.saveWithDetails(sheetId, dataMap, usersMap)
+        } else {
+            false
+        }
+    }
+
+    private fun getUserName(chatId: Long): String? {
+        return try {
+            val chat = bot.telegramBot.getChat(chatId).get()
+            chat?.let {
+                "${it.first_name} ${it.last_name}, ${it.username}, ${it.title}"
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
